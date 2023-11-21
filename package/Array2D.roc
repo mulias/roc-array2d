@@ -12,6 +12,8 @@ interface Array2D exposes [
         fromExactLists,
         shape,
         size,
+        hasIndex,
+        isEmpty,
         isRowStart,
         isRowEnd,
         isColStart,
@@ -19,11 +21,16 @@ interface Array2D exposes [
         set,
         get,
         update,
+        replace,
         swap,
         map,
         mapWithIndex,
         walk,
         walkUntil,
+        first,
+        last,
+        firstIndex,
+        lastIndex,
         toList,
         toLists,
         reshape,
@@ -35,6 +42,9 @@ interface Array2D exposes [
         countIf,
         findFirstIndex,
         findLastIndex,
+        joinWith,
+        subarray,
+        mul,
     ] imports []
 
 Shape : { dimX : Nat, dimY : Nat }
@@ -43,10 +53,19 @@ Index : { x : Nat, y : Nat }
 
 Array2D a := { data : List a, shape : Shape } implements [Eq { isEq: isEq }]
 
-empty : Array2D *
-empty = @Array2D { data: [], shape: { dimX: 0, dimY: 0 } }
+empty : {} -> Array2D *
+empty = \{} -> @Array2D { data: [], shape: { dimX: 0, dimY: 0 } }
 
-expect empty |> toList |> List.len == 0
+expect empty {} |> toList |> List.len == 0
+
+identity : Nat -> Array2D (Num *)
+identity = \dim ->
+    init { dimX: dim, dimY: dim } \{ x, y } -> if x == y then 1 else 0
+
+expect identity 0 |> toLists == []
+expect identity 1 |> toLists == [[1]]
+expect identity 2 |> toLists == [[1, 0], [0, 1]]
+expect identity 3 |> toLists == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 repeat : a, Shape -> Array2D a
 repeat = \elem, arrayShape ->
@@ -172,12 +191,12 @@ expect fromExactList [1, 2, 3, 4, 5, 6, 7] { dimX: 2, dimY: 3 } == Err TooManyEl
 
 fromExactLists : List (List a) -> Result (Array2D a) [InconsistentRowLengths]
 fromExactLists = \lists ->
-    first = lists |> List.first |> Result.withDefault []
+    firstRow = lists |> List.first |> Result.withDefault []
 
-    if List.all lists \list -> List.len list == List.len first then
+    if List.all lists \list -> List.len list == List.len firstRow then
         array = @Array2D {
             data: List.join lists,
-            shape: { dimX: List.len lists, dimY: List.len first },
+            shape: { dimX: List.len lists, dimY: List.len firstRow },
         }
         Ok array
     else
@@ -196,6 +215,16 @@ shape = \@Array2D array -> array.shape
 
 size : Array2D * -> Nat
 size = \@Array2D array -> shapeSize array.shape
+
+hasIndex : Array2D *, Index -> Bool
+hasIndex = \@Array2D { shape: { dimX, dimY } }, index ->
+    index.x < dimX && index.y < dimY
+
+isEmpty : Array2D * -> Bool
+isEmpty = \@Array2D { data } -> List.isEmpty data
+
+expect isEmpty (empty {})
+expect !(repeat 0 { dimX: 2, dimY: 4 } |> isEmpty)
 
 isRowStart : Index -> Bool
 isRowStart = \{ y } -> y == 0
@@ -245,6 +274,25 @@ update = \@Array2D array, index, fn ->
         }
     else
         @Array2D array
+
+replace : Array2D a, Index, a -> { array : Array2D a, value : a }
+replace = \@Array2D array, index, elem ->
+    { list, value } =
+        List.replace array.data (listIndexOf array.shape index) elem
+
+    { array: @Array2D { array & data: list }, value }
+
+expect
+    [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    |> fromLists FitShortest
+    |> replace { x: 1, y: 2 } 0
+    == {
+        array: @Array2D {
+            data: [1, 2, 3, 4, 5, 0, 7, 8, 9],
+            shape: { dimX: 3, dimY: 3 },
+        },
+        value: 6,
+    }
 
 swap : Array2D a, Index, Index -> Array2D a
 swap = \@Array2D array, indexA, indexB ->
@@ -389,6 +437,35 @@ decX = \@Array2D array, index ->
             Ok { x: array.shape.dimX - 1, y: index.y - 1 }
     else
         Ok { x: index.x - 1, y: index.y }
+
+first : Array2D a -> Result a [ArrayWasEmpty]
+first = \array ->
+    array
+    |> firstIndex
+    |> Result.try \index -> get array index
+    |> Result.mapErr \_ -> ArrayWasEmpty
+
+last : Array2D a -> Result a [ArrayWasEmpty]
+last = \array ->
+    array
+    |> lastIndex
+    |> Result.try \index -> get array index
+    |> Result.mapErr \_ -> ArrayWasEmpty
+
+firstIndex : Array2D * -> Result Index [ArrayWasEmpty]
+firstIndex = \array ->
+    if isEmpty array then
+        Err ArrayWasEmpty
+    else
+        Ok { x: 0, y: 0 }
+
+lastIndex : Array2D * -> Result Index [ArrayWasEmpty]
+lastIndex = \array ->
+    if isEmpty array then
+        Err ArrayWasEmpty
+    else
+        { dimX, dimY } = shape array
+        Ok { x: dimX - 1, y: dimY - 1 }
 
 toList : Array2D a -> List a
 toList = \@Array2D { data } -> data
@@ -542,6 +619,135 @@ findLastIndex = \@Array2D array, fn ->
     array.data
     |> List.findLastIndex fn
     |> Result.map \listIndex -> arrayIndexOf listIndex array.shape
+
+joinWith : Array2D Str, Str, Str -> Str
+joinWith = \array, elemSep, rowSep ->
+    array
+    |> Array2D.toLists
+    |> List.map \row -> Str.joinWith row elemSep
+    |> Str.joinWith rowSep
+
+subarray : Array2D a, Index, Index -> Array2D a
+subarray = \array, firstCorner, secondCorner ->
+    topLeft = {
+        x: Num.min firstCorner.x secondCorner.x,
+        y: Num.min firstCorner.y secondCorner.y,
+    }
+
+    if hasIndex array topLeft then
+        limit = lastIndex array |> Result.withDefault { x: 0, y: 0 }
+
+        bottomRight = {
+            x: Num.max firstCorner.x secondCorner.x |> Num.min limit.x,
+            y: Num.max firstCorner.y secondCorner.y |> Num.min limit.y,
+        }
+
+        dimX = bottomRight.x - topLeft.x + 1
+        dimY = bottomRight.y - topLeft.y + 1
+
+        init { dimX, dimY } \{ x, y } ->
+            when get array { x: topLeft.x + x, y: topLeft.y + y } is
+                Ok elem -> elem
+                Err OutOfBounds -> crash "Unexpected error creating subarray"
+    else
+        @Array2D { data: [], shape: { dimX: 0, dimY: 0 } }
+
+expect
+    fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
+    |> subarray { x: 0, y: 1 } { x: 2, y: 2 }
+    |> toLists
+    == [[2, 3], [5, 6], [8, 9]]
+
+expect
+    fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
+    |> subarray { x: 2, y: 2 } { x: 0, y: 1 }
+    |> toLists
+    == [[2, 3], [5, 6], [8, 9]]
+
+expect
+    fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
+    |> subarray { x: 2, y: 1 } { x: 0, y: 2 }
+    |> toLists
+    == [[2, 3], [5, 6], [8, 9]]
+
+expect
+    fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
+    |> subarray { x: 0, y: 2 } { x: 2, y: 1 }
+    |> toLists
+    == [[2, 3], [5, 6], [8, 9]]
+
+expect
+    fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
+    |> subarray { x: 0, y: 0 } { x: 10, y: 10 }
+    |> toLists
+    == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
+expect
+    fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
+    |> subarray { x: 0, y: 10 } { x: 10, y: 0 }
+    |> toLists
+    == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
+expect
+    fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
+    |> subarray { x: 0, y: 2 } { x: 10, y: 10 }
+    |> toLists
+    == [[3], [6], [9]]
+
+expect
+    fromLists [[1, 2, 3, 0], [4, 5, 6, 0], [7, 8, 9, 0]] FitShortest
+    |> subarray { x: 5, y: 5 } { x: 10, y: 10 }
+    |> toLists
+    == []
+
+mul : Array2D (Num a), Array2D (Num a) -> Result (Array2D (Num a)) [InnerDimensionsMismatch]
+mul = \a, b ->
+    shapeA = shape a
+    shapeB = shape b
+
+    if shapeA.dimY == shapeB.dimX then
+        sharedIndices = List.range { start: At 0, end: Before shapeA.dimY }
+
+        product =
+            init { dimX: shapeA.dimX, dimY: shapeB.dimY } \{ x, y } ->
+                List.walk sharedIndices 0 \state, index ->
+                    when (get a { x, y: index }, get b { x: index, y }) is
+                        (Ok elemA, Ok elemB) -> state + (elemA * elemB)
+                        (_, _) -> crash "Unexpected error multiplying arrays"
+
+        Ok product
+    else
+        Err InnerDimensionsMismatch
+
+expect
+    a = fromLists [[1, 2], [3, 4]] FitShortest
+    b = fromLists [[5, 6], [7, 8]] FitShortest
+    c = fromLists
+        [
+            [(1 * 5) + (2 * 7), (1 * 6) + (2 * 8)],
+            [(3 * 5) + (4 * 7), (3 * 6) + (4 * 8)],
+        ]
+        FitShortest
+    mul a b == Ok c
+
+expect
+    a = fromLists [[1, 2, 3, 4]] FitShortest
+    b = fromLists [[2, 1, 2], [4, 3, 5], [3, 7, 9], [2, 1, 7]] FitShortest
+    c = fromLists [[27, 32, 67]] FitShortest
+    mul a b == Ok c
+
+expect
+    a = fromLists [[1, 2, 3]] FitShortest
+    b = fromLists [[2, 1, 2], [4, 3, 5], [3, 7, 9], [2, 1, 7]] FitShortest
+    mul a b == Err InnerDimensionsMismatch
+
+expect
+    a = fromLists [[1, 2], [3, 4], [5, 6]] FitShortest
+    mul a (identity 2) == Ok a
+
+expect
+    a = fromLists [[1, 2, 3], [4, 5, 6]] FitShortest
+    mul a (identity 3) == Ok a
 
 isInBounds : Shape, Index -> Bool
 isInBounds = \arrayShape, index ->
