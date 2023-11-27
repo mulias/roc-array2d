@@ -316,16 +316,16 @@ mapWithIndex = \@Array2D array, fn -> @Array2D {
         shape: array.shape,
     }
 
-WalkOptions : {
-    direction ? [Forwards, Backwards],
+WalkOptions a : {
+    direction : [Forwards, Backwards],
     orientation ? [Rows, Cols],
     start ? Index,
-}
+}a
 
-walk : Array2D a, state, WalkOptions, (state, a, Index -> state) -> state
+walk : Array2D a, state, WalkOptions *, (state, a, Index -> state) -> state
 walk = \array, startState, options, fn ->
-    { direction ? Forwards, orientation ? Rows } = options
-    { start ? walkStart array direction } = options
+    direction = options.direction
+    { orientation ? Rows, start ? walkStart array options.direction } = options
 
     if direction == Forwards && orientation == Rows && start == { x: 0, y: 0 } then
         (@Array2D { data, shape: arrayShape }) = array
@@ -337,12 +337,12 @@ walk = \array, startState, options, fn ->
 
 expect
     repeat 0 { dimX: 3, dimY: 2 }
-    |> walk [] { direction: Forwards, orientation: Rows, start: { x: 0, y: 0 } } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Forwards } \acc, _, { x, y } -> List.append acc (x, y)
     == [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
 
 expect
     repeat 0 { dimX: 3, dimY: 2 }
-    |> walk [] { direction: Backwards, orientation: Rows, start: { x: 2, y: 1 } } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Backwards, start: { x: 2, y: 1 } } \acc, _, { x, y } -> List.append acc (x, y)
     == [(2, 1), (2, 0), (1, 1), (1, 0), (0, 1), (0, 0)]
 
 expect
@@ -355,10 +355,10 @@ expect
     |> walk [] { direction: Backwards, orientation: Cols, start: { x: 2, y: 1 } } \acc, _, { x, y } -> List.append acc (x, y)
     == [(2, 1), (1, 1), (0, 1), (2, 0), (1, 0), (0, 0)]
 
-walkUntil : Array2D a, state, WalkOptions, (state, a, Index -> [Continue state, Break state]) -> state
+walkUntil : Array2D a, state, WalkOptions *, (state, a, Index -> [Continue state, Break state]) -> state
 walkUntil = \array, startState, options, fn ->
-    { direction ? Forwards, orientation ? Rows } = options
-    { start ? walkStart array direction } = options
+    direction = options.direction
+    { orientation ? Rows, start ? walkStart array options.direction } = options
 
     when (direction, orientation) is
         (Forwards, Rows) -> walkRowsUntil array start startState fn
