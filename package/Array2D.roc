@@ -53,11 +53,14 @@ Index : { x : Nat, y : Nat }
 
 Array2D a := { data : List a, shape : Shape } implements [Eq { isEq: isEq }]
 
+## Returns an empty array with 0 rows and 0 columns.
 empty : {} -> Array2D *
 empty = \{} -> @Array2D { data: [], shape: { dimX: 0, dimY: 0 } }
 
 expect empty {} |> toList |> List.len == 0
 
+## Returns an [identity matrix](https://en.wikipedia.org/wiki/Identity_matrix)
+## with the specified number of elements along the diagonal.
 identity : Nat -> Array2D (Num *)
 identity = \dim ->
     init { dimX: dim, dimY: dim } \{ x, y } -> if x == y then 1 else 0
@@ -67,12 +70,14 @@ expect identity 1 |> toLists == [[1]]
 expect identity 2 |> toLists == [[1, 0], [0, 1]]
 expect identity 3 |> toLists == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
+## Create an array with the same value repeated for each element.
 repeat : a, Shape -> Array2D a
 repeat = \elem, arrayShape ->
     @Array2D { data: List.repeat elem (shapeSize arrayShape), shape: arrayShape }
 
 expect repeat Empty { dimX: 3, dimY: 2 } == @Array2D { data: [Empty, Empty, Empty, Empty, Empty, Empty], shape: { dimX: 3, dimY: 2 } }
 
+## Create an array of given `Shape`, populating elements via an init function.
 init : Shape, (Index -> a) -> Array2D a
 init = \arrayShape, fn ->
     mapWithIndex (repeat Empty arrayShape) \_elem, index -> fn index
@@ -81,6 +86,9 @@ expect
     init { dimX: 4, dimY: 2 } \{ x, y } -> (x, y)
     == @Array2D { data: [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1), (3, 0), (3, 1)], shape: { dimX: 4, dimY: 2 } }
 
+## Fill an array of the given `Shape`, populating elements via a starting list
+## and an init function. If there are not enough list elements to fill the
+## array then the init function is ran with `Err Empty` as the element.
 initWithList : List a, Shape, (Result a [Empty], Index -> b) -> Array2D b
 initWithList = \list, arrayShape, fn ->
     list
@@ -101,6 +109,11 @@ expect
         elem |> Result.map Some |> Result.withDefault Empty
     == @Array2D { data: [Some 1, Some 2, Some 3, Some 4, Empty, Empty], shape: { dimX: 2, dimY: 3 } }
 
+## Fill an array of the given `Shape` with elements from a list of lists, via
+## an init function. Each inner list is used to populate one row of the
+## `Array2D`. If there are not enough lists, or if there are not enough
+## elements in a list to fill an array row, then the init function is ran with
+## `Err Empty` as the element.
 initWithLists : List (List a), Shape, (Result a [Empty], Index -> b) -> Array2D b
 initWithLists = \lists, arrayShape, fn ->
     lists
@@ -112,6 +125,14 @@ expect
     initWithLists [[1, 2, 3, 4], [1, 2]] { dimX: 2, dimY: 3 } \elem, _ -> elem |> Result.map Some |> Result.withDefault Empty
     == @Array2D { data: [Some 1, Some 2, Some 3, Some 1, Some 2, Empty], shape: { dimX: 2, dimY: 3 } }
 
+## Create an array from a list. The `strategy` determines how the array is
+## initialized:
+##
+##    * `Fit` - Return an array with 1 row, exactly fitting the list elements.
+##
+##    * `Fill default shape` - Return an array of `shape`. If there are not
+##       enough list elements to fill the array then `default` is used for all
+##       remaining elements.
 fromList : List a, [Fit, Fill a Shape] -> Array2D a
 fromList = \list, stratagy ->
     array = @Array2D { data: list, shape: { dimX: 1, dimY: List.len list } }
@@ -127,6 +148,21 @@ expect
     fromList [1, 2, 3, 4, 5] (Fill 0 { dimX: 4, dimY: 2 })
     == @Array2D { data: [1, 2, 3, 4, 5, 0, 0, 0], shape: { dimX: 4, dimY: 2 } }
 
+## Create an array from a list of lists. The `strategy` determines how the
+## array is initialized:
+##
+##    * `FitShortest` - Return an array where each list is a row. The array has
+##      columns equal to the number of elements in the shortest list. Any
+##      additional elements are dropped per row.
+##
+##    * `FitLongest default` - Return an array where each list is a row. The
+##      array has columns equal to the number of elements in the longest list.
+##      If there are not enough list elements to fill a row then `default` is
+##      used for all remaining values.
+##
+##    * `Fill default shape` - Return an array of `shape`. If there are not
+##      enough lists or list elements to fill a row then `default` is used for
+##      all remaining values.
 fromLists : List (List a), [FitShortest, FitLongest a, Fill a Shape] -> Array2D a
 fromLists = \lists, stratagy ->
     when stratagy is
@@ -172,6 +208,10 @@ expect
     fromLists [[1, 2, 3], [4]] (Fill -1 { dimX: 4, dimY: 2 })
     == @Array2D { data: [1, 2, 4, -1, -1, -1, -1, -1], shape: { dimX: 4, dimY: 2 } }
 
+## Create an array of given `Shape`, populating elements via a starting list.
+## If the list does not have enough elements to fill the array then return `Err
+## NotEnoughElements`. If the list has more elements than the capacity of the
+## array then return `Err TooManyElements`.
 fromExactList : List a, Shape -> Result (Array2D a) [NotEnoughElements, TooManyElements]
 fromExactList = \list, arrayShape ->
     if List.len list == shapeSize arrayShape then
@@ -189,6 +229,8 @@ expect fromExactList [1, 2, 3, 4] { dimX: 2, dimY: 3 } == Err NotEnoughElements
 
 expect fromExactList [1, 2, 3, 4, 5, 6, 7] { dimX: 2, dimY: 3 } == Err TooManyElements
 
+## Create an array from a list of lists. If the row lists do not all have the
+## same length then return `Err InconsistentRowLengths`.
 fromExactLists : List (List a) -> Result (Array2D a) [InconsistentRowLengths]
 fromExactLists = \lists ->
     firstRow = lists |> List.first |> Result.withDefault []
@@ -210,37 +252,47 @@ expect fromExactLists [[1, 2, 3], [3, 4], [5, 6]] == Err InconsistentRowLengths
 
 expect fromExactLists [[1, 2], [3, 4], [5, 6, 7]] == Err InconsistentRowLengths
 
+## Get the x/y dimensions of an array.
 shape : Array2D * -> Shape
 shape = \@Array2D array -> array.shape
 
+## Get the total number of elements in an array.
 size : Array2D * -> Nat
 size = \@Array2D array -> shapeSize array.shape
 
+## Predicate to determine if an index is within the bounds of an array.
 hasIndex : Array2D *, Index -> Bool
 hasIndex = \@Array2D { shape: { dimX, dimY } }, index ->
     index.x < dimX && index.y < dimY
 
+## Predicate to determine if an array has zero elements. An empty array will
+## have at least one dimension of length 0.
 isEmpty : Array2D * -> Bool
 isEmpty = \@Array2D { data } -> List.isEmpty data
 
 expect isEmpty (empty {})
 expect !(repeat 0 { dimX: 2, dimY: 4 } |> isEmpty)
 
+## Predicate to determine if an index is the first index in a row.
 isRowStart : Index -> Bool
 isRowStart = \{ y } -> y == 0
 
+## Predicate to determine if an index is the last index in a row for a given
+## array.
 isRowEnd : Array2D *, Index -> Bool
 isRowEnd = \@Array2D { shape: { dimY } }, { y } -> y + 1 >= dimY
 
+## Predicate to determine if an index is the first index in a column.
 isColStart : Index -> Bool
 isColStart = \{ x } -> x == 0
 
+## Predicate to determine if an index is the last index in a column for a given
+## array.
 isColEnd : Array2D *, Index -> Bool
 isColEnd = \@Array2D { shape: { dimX } }, { x } -> x + 1 >= dimX
 
-shapeSize : Shape -> Nat
-shapeSize = \{ dimX, dimY } -> dimX * dimY
-
+## Change the element at the given index. If the index is outside the bounds of
+## the array, return the original array unmodified.
 set : Array2D a, Index, a -> Array2D a
 set = \@Array2D array, index, elem ->
     if isInBounds array.shape index then
@@ -258,6 +310,8 @@ expect
     |> set { x: 1, y: 4 } 9
     == @Array2D { data: [0, 0, 0, 0, 0, 0, 0, 0, 0], shape: { dimX: 3, dimY: 3 } }
 
+## Attempt to retrieve the array value at a given index. If the index is not
+## within the array then return `Err OutOfBounds`.
 get : Array2D a, Index -> Result a [OutOfBounds]
 get = \@Array2D array, index ->
     if isInBounds array.shape index then
@@ -265,6 +319,9 @@ get = \@Array2D array, index ->
     else
         Err OutOfBounds
 
+## Update the value at the given index with the given function.
+## If the given index is outside the bounds of the array, return the original
+## array unmodified.
 update : Array2D a, Index, (a -> a) -> Array2D a
 update = \@Array2D array, index, fn ->
     if isInBounds array.shape index then
@@ -275,6 +332,8 @@ update = \@Array2D array, index, fn ->
     else
         @Array2D array
 
+## Update the value at the given index, returning the new array and the
+## replaced element.
 replace : Array2D a, Index, a -> { array : Array2D a, value : a }
 replace = \@Array2D array, index, elem ->
     { list, value } =
@@ -511,6 +570,8 @@ resize = \list, defaultValue, newLen ->
     else
         list
 
+## Take the [transpose](https://en.wikipedia.org/wiki/Transpose) of a matrix.
+## This operation flips the array values along the diagonal.
 transpose : Array2D a -> Array2D a
 transpose = \@Array2D array ->
     startAcc = @Array2D { array & shape: { dimX: array.shape.dimY, dimY: array.shape.dimX } }
@@ -620,6 +681,8 @@ findLastIndex = \@Array2D array, fn ->
     |> List.findLastIndex fn
     |> Result.map \listIndex -> arrayIndexOf listIndex array.shape
 
+## Concatenate an array of strings into a single string, interspersing each
+## element with an element separator and each row with a row separator.
 joinWith : Array2D Str, Str, Str -> Str
 joinWith = \array, elemSep, rowSep ->
     array
@@ -627,6 +690,8 @@ joinWith = \array, elemSep, rowSep ->
     |> List.map \row -> Str.joinWith row elemSep
     |> Str.joinWith rowSep
 
+## Create a new array containing elements from a square area within the given
+## array.
 subarray : Array2D a, Index, Index -> Array2D a
 subarray = \array, firstCorner, secondCorner ->
     topLeft = {
@@ -700,6 +765,10 @@ expect
     |> toLists
     == []
 
+## Perform [matrix multiplication](https://en.wikipedia.org/wiki/Matrix_multiplication)
+## on two arrays. A prerequisite of this operation is that the number of columns in
+## the first array must match the number of rows in the second array. If this
+## doesn't hold then return `Err InnerDimensionsMismatch`.
 mul : Array2D (Num a), Array2D (Num a) -> Result (Array2D (Num a)) [InnerDimensionsMismatch]
 mul = \a, b ->
     shapeA = shape a
@@ -748,6 +817,9 @@ expect
 expect
     a = fromLists [[1, 2, 3], [4, 5, 6]] FitShortest
     mul a (identity 3) == Ok a
+
+shapeSize : Shape -> Nat
+shapeSize = \{ dimX, dimY } -> dimX * dimY
 
 isInBounds : Shape, Index -> Bool
 isInBounds = \arrayShape, index ->
