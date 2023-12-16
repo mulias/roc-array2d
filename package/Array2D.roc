@@ -584,6 +584,9 @@ expect
     |> Result.map toLists
     == Ok [[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
 
+## Swap the position of each element so that their `x` component changes and
+## `y` component stays the same. This exchanges the top row of the array with
+## the bottom row, the second row with the second to last row, etc.
 flipX : Array2D a -> Array2D a
 flipX = \@Array2D array ->
     startAcc = @Array2D array
@@ -602,6 +605,10 @@ expect
     |> Result.map toLists
     == Ok [[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]
 
+## Swap the position of each element so that their `y` component changes and
+## `x` component stays the same. This exchanges the first element of each row
+## with the last element of the row, the second element with the second to last
+## element, etc.
 flipY : Array2D a -> Array2D a
 flipY = \@Array2D array ->
     startAcc = @Array2D array
@@ -609,16 +616,16 @@ flipY = \@Array2D array ->
         newIndex =
             listIndex
             |> arrayIndexOf array.shape
-            |> flipIndex array.shape X
+            |> flipIndex array.shape Y
 
         set acc newIndex elem
 
 expect
     [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
     |> fromExactLists
-    |> Result.map flipX
+    |> Result.map flipY
     |> Result.map toLists
-    == Ok [[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]
+    == Ok [[4, 3, 2, 1], [8, 7, 6, 5], [12, 11, 10, 9]]
 
 ## Rotate every array element clockwise 90 degrees. This swaps the X and Y
 ## dimensions of the array.
