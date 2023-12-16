@@ -1,6 +1,5 @@
 # Advent of Code 2022 Day 8
 # https://adventofcode.com/2022/day/8
-
 app "Advent2022Day08"
     packages {
         cli: "https://github.com/roc-lang/basic-cli/releases/download/0.6.2/c7T4Hp8bAdWz3r9ZrhboBzibCjJag8d0IP_ljb42yVc.tar.br",

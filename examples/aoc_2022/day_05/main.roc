@@ -1,6 +1,5 @@
 # Advent of Code 2022 Day 5
 # https://adventofcode.com/2022/day/5
-
 app "Advent2022Day05"
     packages {
         cli: "https://github.com/roc-lang/basic-cli/releases/download/0.6.2/c7T4Hp8bAdWz3r9ZrhboBzibCjJag8d0IP_ljb42yVc.tar.br",
@@ -143,12 +142,13 @@ crateRowsParser =
         (codeunit '\n')
 
 crateParser =
-    const (\c ->
-        [c]
-        |> Str.fromUtf8
-        |> orCrash "Error: UTF8 to String conversion issue"
-        |> Ok
-    )
+    const
+        (\c ->
+            [c]
+            |> Str.fromUtf8
+            |> orCrash "Error: UTF8 to String conversion issue"
+            |> Ok
+        )
     |> skip (codeunit '[')
     |> keep anyCodeunit
     |> skip (codeunit ']')
