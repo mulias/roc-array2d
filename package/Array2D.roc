@@ -264,14 +264,25 @@ expect fromExactLists [[1, 2], [3, 4], [5, 6, 7]] == Err InconsistentRowLengths
 shape : Array2D * -> Shape
 shape = \@Array2D array -> array.shape
 
+expect repeat 0 { dimX: 3, dimY: 4 } |> shape == { dimX: 3, dimY: 4 }
+expect empty {} |> shape == { dimX: 0, dimY: 0 }
+
 ## Get the total number of elements in an array.
 size : Array2D * -> Nat
 size = \@Array2D array -> shapeSize array.shape
+
+expect repeat 0 { dimX: 3, dimY: 4 } |> size == 12
+expect empty {} |> size == 0
 
 ## Predicate to determine if an index is within the bounds of an array.
 hasIndex : Array2D *, Index -> Bool
 hasIndex = \@Array2D { shape: { dimX, dimY } }, index ->
     index.x < dimX && index.y < dimY
+
+expect repeat 0 { dimX: 3, dimY: 2 } |> hasIndex { x: 0, y: 0 } == Bool.true
+expect repeat 0 { dimX: 3, dimY: 2 } |> hasIndex { x: 2, y: 1 } == Bool.true
+expect repeat 0 { dimX: 3, dimY: 2 } |> hasIndex { x: 0, y: 2 } == Bool.false
+expect repeat 0 { dimX: 3, dimY: 2 } |> hasIndex { x: 3, y: 0 } == Bool.false
 
 ## Predicate to determine if an array has zero elements. An empty array will
 ## have at least one dimension of length 0.
@@ -285,19 +296,35 @@ expect !(repeat 0 { dimX: 2, dimY: 4 } |> isEmpty)
 isRowStart : Index -> Bool
 isRowStart = \{ y } -> y == 0
 
+expect isRowStart { x: 0, y: 0 } == Bool.true
+expect isRowStart { x: 0, y: 1 } == Bool.false
+
 ## Predicate to determine if an index is the last index in a row for a given
 ## array.
 isRowEnd : Array2D *, Index -> Bool
-isRowEnd = \@Array2D { shape: { dimY } }, { y } -> y + 1 >= dimY
+isRowEnd = \@Array2D { shape: { dimY } }, { y } -> y + 1 == dimY
+
+expect identity 1 |> isRowEnd { x: 0, y: 0 } == Bool.true
+expect identity 3 |> isRowEnd { x: 0, y: 2 } == Bool.true
+expect identity 3 |> isRowEnd { x: 0, y: 5 } == Bool.false
+expect repeat X { dimX: 2, dimY: 3 } |> isRowEnd { x: 0, y: 1 } == Bool.false
 
 ## Predicate to determine if an index is the first index in a column.
 isColStart : Index -> Bool
 isColStart = \{ x } -> x == 0
 
+expect isColStart { x: 0, y: 0 } == Bool.true
+expect isColStart { x: 1, y: 0 } == Bool.false
+
 ## Predicate to determine if an index is the last index in a column for a given
 ## array.
 isColEnd : Array2D *, Index -> Bool
-isColEnd = \@Array2D { shape: { dimX } }, { x } -> x + 1 >= dimX
+isColEnd = \@Array2D { shape: { dimX } }, { x } -> x + 1 == dimX
+
+expect identity 1 |> isColEnd { x: 0, y: 0 } == Bool.true
+expect identity 3 |> isColEnd { x: 2, y: 0 } == Bool.true
+expect identity 3 |> isColEnd { x: 5, y: 0 } == Bool.false
+expect repeat X { dimX: 3, dimY: 2 } |> isColEnd { x: 1, y: 0 } == Bool.false
 
 ## Change the element at the given index. If the index is outside the bounds of
 ## the array, return the original array unmodified.
@@ -327,8 +354,12 @@ get = \@Array2D array, index ->
     else
         Err OutOfBounds
 
+expect identity 4 |> get { x: 1, y: 1 } == Ok 1
+expect identity 4 |> get { x: 1, y: 2 } == Ok 0
+expect identity 4 |> get { x: 4, y: 2 } == Err OutOfBounds
+
 ## Update the value at the given index with the given function.
-## If the given index is outside the bounds of the array, return the original
+## If the index is outside the bounds of the array, return the original
 ## array unmodified.
 update : Array2D a, Index, (a -> a) -> Array2D a
 update = \@Array2D array, index, fn ->
@@ -340,14 +371,28 @@ update = \@Array2D array, index, fn ->
     else
         @Array2D array
 
-## Update the value at the given index, returning the new array and the
-## replaced element.
-replace : Array2D a, Index, a -> { array : Array2D a, value : a }
-replace = \@Array2D array, index, elem ->
-    { list, value } =
-        List.replace array.data (listIndexOf array.shape index) elem
+expect
+    repeat 0 { dimX: 3, dimY: 3 }
+    |> update { x: 1, y: 1 } \n -> n + 1
+    == @Array2D { data: [0, 0, 0, 0, 1, 0, 0, 0, 0], shape: { dimX: 3, dimY: 3 } }
 
-    { array: @Array2D { array & data: list }, value }
+expect
+    repeat 0 { dimX: 3, dimY: 3 }
+    |> update { x: 1, y: 4 } \n -> n + 1
+    == @Array2D { data: [0, 0, 0, 0, 0, 0, 0, 0, 0], shape: { dimX: 3, dimY: 3 } }
+
+## Update the value at the given index, returning the new array and the
+## replaced value. If the index is outside the bounds of the array, return the
+## original array unmodified and the intended replacement value as `value`.
+replace : Array2D a, Index, a -> { array : Array2D a, value : a }
+replace = \@Array2D array, index, newValue ->
+    if isInShape array.shape index then
+        { list, value } =
+            List.replace array.data (listIndexOf array.shape index) newValue
+
+        { array: @Array2D { array & data: list }, value }
+    else
+        { array: @Array2D array, value: newValue }
 
 expect
     [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
@@ -361,10 +406,26 @@ expect
         value: 6,
     }
 
-## Exchange elements at two array indices.
+expect
+    [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    |> fromLists FitShortest
+    |> replace { x: 1, y: 10 } 0
+    == {
+        array: @Array2D {
+            data: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+            shape: { dimX: 3, dimY: 3 },
+        },
+        value: 0,
+    }
+
+## Exchange elements at two array indices. If either index is out of bounds
+## return the array unchanged.
 swap : Array2D a, Index, Index -> Array2D a
 swap = \@Array2D array, indexA, indexB ->
-    @Array2D { array & data: List.swap array.data (listIndexOf array.shape indexA) (listIndexOf array.shape indexB) }
+    if isInShape array.shape indexB && isInShape array.shape indexB then
+        @Array2D { array & data: List.swap array.data (listIndexOf array.shape indexA) (listIndexOf array.shape indexB) }
+    else
+        @Array2D array
 
 expect
     [[X, A, A], [A, Y, A], [A, A, A]]
@@ -373,11 +434,23 @@ expect
     |> toLists
     == [[Y, A, A], [A, X, A], [A, A, A]]
 
+expect
+    [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    |> fromLists FitShortest
+    |> swap { x: 0, y: 0 } { x: 1, y: 3 }
+    |> toLists
+    == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
 ## Convert each element in the array to something new via a conversion
 ## function. Return a new array of the converted values.
 map : Array2D a, (a -> b) -> Array2D b
 map = \@Array2D array, fn ->
     @Array2D { data: List.map array.data fn, shape: array.shape }
+
+expect
+    repeat 0 { dimX: 2, dimY: 3 }
+    |> map \n -> n + 1
+    == repeat 1 { dimX: 2, dimY: 3 }
 
 ## Similar to `Array2D.map`, also provide the index for each element.
 mapWithIndex : Array2D a, (a, Index -> b) -> Array2D b
@@ -385,6 +458,19 @@ mapWithIndex = \@Array2D array, fn -> @Array2D {
         data: List.mapWithIndex array.data \elem, listIndex ->
             fn elem (arrayIndexOf listIndex array.shape),
         shape: array.shape,
+    }
+
+expect
+    @Array2D { data: [1, 2, 3, 4], shape: { dimX: 2, dimY: 2 } }
+    |> mapWithIndex \n, idx -> (n, idx)
+    == @Array2D {
+        data: [
+            (1, { x: 0, y: 0 }),
+            (2, { x: 0, y: 1 }),
+            (3, { x: 1, y: 0 }),
+            (4, { x: 1, y: 1 }),
+        ],
+        shape: { dimX: 2, dimY: 2 },
     }
 
 WalkOptions a : {
