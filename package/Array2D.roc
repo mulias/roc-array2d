@@ -330,10 +330,12 @@ expect repeat X { dimX: 3, dimY: 2 } |> isColEnd { x: 1, y: 0 } == Bool.false
 ## the array, return the original array unmodified.
 set : Array2D a, Index, a -> Array2D a
 set = \@Array2D array, index, elem ->
-    if isInShape array.shape index then
-        @Array2D { array & data: List.set array.data (listIndexOf array.shape index) elem }
-    else
-        @Array2D array
+    array
+    |> .shape
+    |> listIndexOf index
+    |> Result.map \listIndex ->
+        @Array2D { array & data: List.set array.data listIndex elem }
+    |> Result.withDefault (@Array2D array)
 
 expect
     repeat 0 { dimX: 3, dimY: 3 }
@@ -349,10 +351,11 @@ expect
 ## within the array then return `Err OutOfBounds`.
 get : Array2D a, Index -> Result a [OutOfBounds]
 get = \@Array2D array, index ->
-    if isInShape array.shape index then
-        List.get array.data (listIndexOf array.shape index)
-    else
-        Err OutOfBounds
+    array
+    |> .shape
+    |> listIndexOf index
+    |> Result.try \listIndex ->
+        List.get array.data listIndex
 
 expect identity 4 |> get { x: 1, y: 1 } == Ok 1
 expect identity 4 |> get { x: 1, y: 2 } == Ok 0
@@ -363,13 +366,15 @@ expect identity 4 |> get { x: 4, y: 2 } == Err OutOfBounds
 ## array unmodified.
 update : Array2D a, Index, (a -> a) -> Array2D a
 update = \@Array2D array, index, fn ->
-    if isInShape array.shape index then
+    array
+    |> .shape
+    |> listIndexOf index
+    |> Result.map \listIndex ->
         @Array2D {
-            data: List.update array.data (listIndexOf array.shape index) fn,
+            data: List.update array.data listIndex fn,
             shape: array.shape,
         }
-    else
-        @Array2D array
+    |> Result.withDefault (@Array2D array)
 
 expect
     repeat 0 { dimX: 3, dimY: 3 }
@@ -386,13 +391,13 @@ expect
 ## original array unmodified and the intended replacement value as `value`.
 replace : Array2D a, Index, a -> { array : Array2D a, value : a }
 replace = \@Array2D array, index, newValue ->
-    if isInShape array.shape index then
-        { list, value } =
-            List.replace array.data (listIndexOf array.shape index) newValue
-
+    array
+    |> .shape
+    |> listIndexOf index
+    |> Result.map \listIndex ->
+        { list, value } = List.replace array.data listIndex newValue
         { array: @Array2D { array & data: list }, value }
-    else
-        { array: @Array2D array, value: newValue }
+    |> Result.withDefault { array: @Array2D array, value: newValue }
 
 expect
     [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
@@ -422,10 +427,12 @@ expect
 ## return the array unchanged.
 swap : Array2D a, Index, Index -> Array2D a
 swap = \@Array2D array, indexA, indexB ->
-    if isInShape array.shape indexB && isInShape array.shape indexB then
-        @Array2D { array & data: List.swap array.data (listIndexOf array.shape indexA) (listIndexOf array.shape indexB) }
-    else
-        @Array2D array
+    result =
+        listIndexA <- listIndexOf array.shape indexA |> Result.try
+        listIndexB <- listIndexOf array.shape indexB |> Result.map
+        @Array2D { array & data: List.swap array.data listIndexA listIndexB }
+
+    result |> Result.withDefault (@Array2D array)
 
 expect
     [[X, A, A], [A, Y, A], [A, A, A]]
@@ -623,7 +630,11 @@ toLists = \array ->
     startState = List.withCapacity dimX
 
     List.walk xIndicies startState \state, xIndex ->
-        startIndex = listIndexOf { dimX, dimY } { x: xIndex, y: 0 }
+        startIndex =
+            when listIndexOf { dimX, dimY } { x: xIndex, y: 0 } is
+                Ok listIndex -> listIndex
+                Err OutOfBounds -> crash "Index should not be out of bounds"
+
         row = List.sublist data { start: startIndex, len: dimY }
         List.append state row
 
@@ -926,8 +937,12 @@ isInShape : Shape, Index -> Bool
 isInShape = \arrayShape, index ->
     index.x < arrayShape.dimX && index.y < arrayShape.dimY
 
-listIndexOf : Shape, Index -> Nat
-listIndexOf = \{ dimY }, { x, y } -> (x * dimY) + y
+listIndexOf : Shape, Index -> Result Nat [OutOfBounds]
+listIndexOf = \arrayShape, index ->
+    if isInShape arrayShape index then
+        Ok ((index.x * arrayShape.dimY) + index.y)
+    else
+        Err OutOfBounds
 
 arrayIndexOf : Nat, Shape -> Index
 arrayIndexOf = \index, { dimY } ->
