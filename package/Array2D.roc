@@ -579,6 +579,26 @@ walkUntil = \array, startState, options, fn ->
         (Forwards, Cols) -> walkColsUntil array boundedStart startState fn
         (Backwards, Cols) -> walkColsBackwardsUntil array boundedStart startState fn
 
+expect
+    [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    |> fromLists FitShortest
+    |> walkUntil 0 { direction: Forwards } \acc, elem, _index ->
+        if elem == 5 then
+            Break acc
+        else
+            Continue (acc + elem)
+    == 10
+
+expect
+    [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    |> fromLists FitShortest
+    |> walkUntil 0 { direction: Backwards } \acc, elem, _index ->
+        if elem == 5 then
+            Break acc
+        else
+            Continue (acc + elem)
+    == 30
+
 ## Return the first element in the array, or `Err ArrayWasEmpty` if the array
 ## was empty.
 first : Array2D a -> Result a [ArrayWasEmpty]
@@ -587,6 +607,9 @@ first = \array ->
     |> firstIndex
     |> Result.try \index -> get array index
     |> Result.mapErr \_ -> ArrayWasEmpty
+
+expect empty {} |> first == Err ArrayWasEmpty
+expect @Array2D { data: [5, 2, 3, 4], shape: { dimX: 2, dimY: 2 } } |> first == Ok 5
 
 ## Return the last element in the array, or `Err ArrayWasEmpty` if the array
 ## was empty.
@@ -597,6 +620,9 @@ last = \array ->
     |> Result.try \index -> get array index
     |> Result.mapErr \_ -> ArrayWasEmpty
 
+expect empty {} |> last == Err ArrayWasEmpty
+expect @Array2D { data: [5, 2, 3, 4], shape: { dimX: 2, dimY: 2 } } |> last == Ok 4
+
 ## Return the first index in the array, or `Err ArrayWasEmpty` if the array was
 ## empty.
 firstIndex : Array2D * -> Result Index [ArrayWasEmpty]
@@ -605,6 +631,9 @@ firstIndex = \array ->
         Err ArrayWasEmpty
     else
         Ok { x: 0, y: 0 }
+
+expect empty {} |> firstIndex == Err ArrayWasEmpty
+expect @Array2D { data: [5, 2, 3, 4], shape: { dimX: 2, dimY: 2 } } |> firstIndex == Ok { x: 0, y: 0 }
 
 ## Return the last index in the array, or `Err ArrayWasEmpty` if the array was
 ## empty.
@@ -615,6 +644,9 @@ lastIndex = \array ->
     else
         { dimX, dimY } = shape array
         Ok { x: dimX - 1, y: dimY - 1 }
+
+expect empty {} |> lastIndex == Err ArrayWasEmpty
+expect identity 4 |> lastIndex == Ok { x: 3, y: 3 }
 
 ## Convert an array to a flat list of elements.
 toList : Array2D a -> List a
@@ -797,6 +829,12 @@ joinWith = \array, elemSep, rowSep ->
     |> Array2D.toLists
     |> List.map \row -> Str.joinWith row elemSep
     |> Str.joinWith rowSep
+
+expect
+    [["a", "b", "c"], ["d", "e", "f"], ["g", "h", "j"]]
+    |> fromLists FitShortest
+    |> joinWith "," "|"
+    == "a,b,c|d,e,f|g,h,j"
 
 ## Create a new array containing elements from a rectangular area within the
 ## given array. The `firstCorner` and `secondCorner` indices can specify any
