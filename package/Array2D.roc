@@ -35,8 +35,8 @@ interface Array2D exposes [
         toLists,
         reshape,
         transpose,
-        flipX,
-        flipY,
+        flipRows,
+        flipCols,
         rotateClockwise,
         rotateCounterClockwise,
         countIf,
@@ -48,7 +48,7 @@ interface Array2D exposes [
     ] imports []
 
 ## 2D coordinate for indexing into an `Array2D`.
-Index : { x : Nat, y : Nat }
+Index : { row : Nat, col : Nat }
 
 ## Dimensions of an `Array2D`. An array of shape `{ rows, cols }` will contain
 ## indices from `{ row: 0, col: 0 }` to `{ row: rows - 1, col: cols - 1 }`.
@@ -70,7 +70,7 @@ expect empty {} |> toList |> List.len == 0
 ## with the specified number of `1`s along the diagonal.
 identity : Nat -> Array2D (Num *)
 identity = \ones ->
-    init { rows: ones, cols: ones } \{ x, y } -> if x == y then 1 else 0
+    init { rows: ones, cols: ones } \{ row, col } -> if row == col then 1 else 0
 
 expect identity 0 |> toLists == []
 expect identity 1 |> toLists == [[1]]
@@ -90,7 +90,7 @@ init = \arrayShape, fn ->
     mapWithIndex (repeat Empty arrayShape) \_elem, index -> fn index
 
 expect
-    init { rows: 4, cols: 2 } \{ x, y } -> (x, y)
+    init { rows: 4, cols: 2 } \{ row, col } -> (row, col)
     == @Array2D { data: [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1), (3, 0), (3, 1)], shape: { rows: 4, cols: 2 } }
 
 ## Fill an array of the given `Shape`, populating elements via a starting list
@@ -277,12 +277,12 @@ expect empty {} |> size == 0
 ## Predicate to determine if an index is within the bounds of an array.
 hasIndex : Array2D *, Index -> Bool
 hasIndex = \@Array2D { shape: { rows, cols } }, index ->
-    index.x < rows && index.y < cols
+    index.row < rows && index.col < cols
 
-expect repeat 0 { rows: 3, cols: 2 } |> hasIndex { x: 0, y: 0 } == Bool.true
-expect repeat 0 { rows: 3, cols: 2 } |> hasIndex { x: 2, y: 1 } == Bool.true
-expect repeat 0 { rows: 3, cols: 2 } |> hasIndex { x: 0, y: 2 } == Bool.false
-expect repeat 0 { rows: 3, cols: 2 } |> hasIndex { x: 3, y: 0 } == Bool.false
+expect repeat 0 { rows: 3, cols: 2 } |> hasIndex { row: 0, col: 0 } == Bool.true
+expect repeat 0 { rows: 3, cols: 2 } |> hasIndex { row: 2, col: 1 } == Bool.true
+expect repeat 0 { rows: 3, cols: 2 } |> hasIndex { row: 0, col: 2 } == Bool.false
+expect repeat 0 { rows: 3, cols: 2 } |> hasIndex { row: 3, col: 0 } == Bool.false
 
 ## Predicate to determine if an array has zero elements. An empty array will
 ## have at least one dimension of length 0.
@@ -294,37 +294,37 @@ expect !(repeat 0 { rows: 2, cols: 4 } |> isEmpty)
 
 ## Predicate to determine if an index is the first index in a row.
 isRowStart : Index -> Bool
-isRowStart = \{ y } -> y == 0
+isRowStart = \{ col } -> col == 0
 
-expect isRowStart { x: 0, y: 0 } == Bool.true
-expect isRowStart { x: 0, y: 1 } == Bool.false
+expect isRowStart { row: 0, col: 0 } == Bool.true
+expect isRowStart { row: 0, col: 1 } == Bool.false
 
 ## Predicate to determine if an index is the last index in a row for a given
 ## array.
 isRowEnd : Array2D *, Index -> Bool
-isRowEnd = \@Array2D { shape: { cols } }, { y } -> y + 1 == cols
+isRowEnd = \@Array2D { shape: { cols } }, { col } -> col + 1 == cols
 
-expect identity 1 |> isRowEnd { x: 0, y: 0 } == Bool.true
-expect identity 3 |> isRowEnd { x: 0, y: 2 } == Bool.true
-expect identity 3 |> isRowEnd { x: 0, y: 5 } == Bool.false
-expect repeat X { rows: 2, cols: 3 } |> isRowEnd { x: 0, y: 1 } == Bool.false
+expect identity 1 |> isRowEnd { row: 0, col: 0 } == Bool.true
+expect identity 3 |> isRowEnd { row: 0, col: 2 } == Bool.true
+expect identity 3 |> isRowEnd { row: 0, col: 5 } == Bool.false
+expect repeat X { rows: 2, cols: 3 } |> isRowEnd { row: 0, col: 1 } == Bool.false
 
 ## Predicate to determine if an index is the first index in a column.
 isColStart : Index -> Bool
-isColStart = \{ x } -> x == 0
+isColStart = \{ row } -> row == 0
 
-expect isColStart { x: 0, y: 0 } == Bool.true
-expect isColStart { x: 1, y: 0 } == Bool.false
+expect isColStart { row: 0, col: 0 } == Bool.true
+expect isColStart { row: 1, col: 0 } == Bool.false
 
 ## Predicate to determine if an index is the last index in a column for a given
 ## array.
 isColEnd : Array2D *, Index -> Bool
-isColEnd = \@Array2D { shape: { rows } }, { x } -> x + 1 == rows
+isColEnd = \@Array2D { shape: { rows } }, { row } -> row + 1 == rows
 
-expect identity 1 |> isColEnd { x: 0, y: 0 } == Bool.true
-expect identity 3 |> isColEnd { x: 2, y: 0 } == Bool.true
-expect identity 3 |> isColEnd { x: 5, y: 0 } == Bool.false
-expect repeat X { rows: 3, cols: 2 } |> isColEnd { x: 1, y: 0 } == Bool.false
+expect identity 1 |> isColEnd { row: 0, col: 0 } == Bool.true
+expect identity 3 |> isColEnd { row: 2, col: 0 } == Bool.true
+expect identity 3 |> isColEnd { row: 5, col: 0 } == Bool.false
+expect repeat X { rows: 3, cols: 2 } |> isColEnd { row: 1, col: 0 } == Bool.false
 
 ## Change the element at the given index. If the index is outside the bounds of
 ## the array, return the original array unmodified.
@@ -339,12 +339,12 @@ set = \@Array2D array, index, elem ->
 
 expect
     repeat 0 { rows: 3, cols: 3 }
-    |> set { x: 1, y: 1 } 9
+    |> set { row: 1, col: 1 } 9
     == @Array2D { data: [0, 0, 0, 0, 9, 0, 0, 0, 0], shape: { rows: 3, cols: 3 } }
 
 expect
     repeat 0 { rows: 3, cols: 3 }
-    |> set { x: 1, y: 4 } 9
+    |> set { row: 1, col: 4 } 9
     == @Array2D { data: [0, 0, 0, 0, 0, 0, 0, 0, 0], shape: { rows: 3, cols: 3 } }
 
 ## Attempt to retrieve the array value at a given index. If the index is not
@@ -357,9 +357,9 @@ get = \@Array2D array, index ->
     |> Result.try \listIndex ->
         List.get array.data listIndex
 
-expect identity 4 |> get { x: 1, y: 1 } == Ok 1
-expect identity 4 |> get { x: 1, y: 2 } == Ok 0
-expect identity 4 |> get { x: 4, y: 2 } == Err OutOfBounds
+expect identity 4 |> get { row: 1, col: 1 } == Ok 1
+expect identity 4 |> get { row: 1, col: 2 } == Ok 0
+expect identity 4 |> get { row: 4, col: 2 } == Err OutOfBounds
 
 ## Update the value at the given index with the given function.
 ## If the index is outside the bounds of the array, return the original
@@ -378,12 +378,12 @@ update = \@Array2D array, index, fn ->
 
 expect
     repeat 0 { rows: 3, cols: 3 }
-    |> update { x: 1, y: 1 } \n -> n + 1
+    |> update { row: 1, col: 1 } \n -> n + 1
     == @Array2D { data: [0, 0, 0, 0, 1, 0, 0, 0, 0], shape: { rows: 3, cols: 3 } }
 
 expect
     repeat 0 { rows: 3, cols: 3 }
-    |> update { x: 1, y: 4 } \n -> n + 1
+    |> update { row: 1, col: 4 } \n -> n + 1
     == @Array2D { data: [0, 0, 0, 0, 0, 0, 0, 0, 0], shape: { rows: 3, cols: 3 } }
 
 ## Update the value at the given index, returning the new array and the
@@ -402,7 +402,7 @@ replace = \@Array2D array, index, newValue ->
 expect
     [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     |> fromLists FitShortest
-    |> replace { x: 1, y: 2 } 0
+    |> replace { row: 1, col: 2 } 0
     == {
         array: @Array2D {
             data: [1, 2, 3, 4, 5, 0, 7, 8, 9],
@@ -414,7 +414,7 @@ expect
 expect
     [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     |> fromLists FitShortest
-    |> replace { x: 1, y: 10 } 0
+    |> replace { row: 1, col: 10 } 0
     == {
         array: @Array2D {
             data: [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -437,14 +437,14 @@ swap = \@Array2D array, indexA, indexB ->
 expect
     [[X, A, A], [A, Y, A], [A, A, A]]
     |> fromLists FitShortest
-    |> swap { x: 0, y: 0 } { x: 1, y: 1 }
+    |> swap { row: 0, col: 0 } { row: 1, col: 1 }
     |> toLists
     == [[Y, A, A], [A, X, A], [A, A, A]]
 
 expect
     [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     |> fromLists FitShortest
-    |> swap { x: 0, y: 0 } { x: 1, y: 3 }
+    |> swap { row: 0, col: 0 } { row: 1, col: 3 }
     |> toLists
     == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
@@ -472,10 +472,10 @@ expect
     |> mapWithIndex \n, idx -> (n, idx)
     == @Array2D {
         data: [
-            (1, { x: 0, y: 0 }),
-            (2, { x: 0, y: 1 }),
-            (3, { x: 1, y: 0 }),
-            (4, { x: 1, y: 1 }),
+            (1, { row: 0, col: 0 }),
+            (2, { row: 0, col: 1 }),
+            (3, { row: 1, col: 0 }),
+            (4, { row: 1, col: 1 }),
         ],
         shape: { rows: 2, cols: 2 },
     }
@@ -510,7 +510,7 @@ walk = \array, startState, options, fn ->
     direction = options.direction
     { orientation ? Rows, start ? walkStart array options.direction } = options
 
-    if direction == Forwards && orientation == Rows && start == { x: 0, y: 0 } then
+    if direction == Forwards && orientation == Rows && start == { row: 0, col: 0 } then
         (@Array2D { data, shape: arrayShape }) = array
         List.walkWithIndex data startState \state, elem, listIndex ->
             fn state elem (arrayIndexOf listIndex arrayShape)
@@ -520,42 +520,42 @@ walk = \array, startState, options, fn ->
 
 expect
     repeat 0 { rows: 3, cols: 2 }
-    |> walk [] { direction: Forwards } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Forwards } \acc, _, { row, col } -> List.append acc (row, col)
     == [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
 
 expect
     repeat 0 { rows: 3, cols: 2 }
-    |> walk [] { direction: Backwards } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Backwards } \acc, _, { row, col } -> List.append acc (row, col)
     == [(2, 1), (2, 0), (1, 1), (1, 0), (0, 1), (0, 0)]
 
 expect
     repeat 0 { rows: 3, cols: 2 }
-    |> walk [] { direction: Forwards, orientation: Cols, start: { x: 0, y: 0 } } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Forwards, orientation: Cols, start: { row: 0, col: 0 } } \acc, _, { row, col } -> List.append acc (row, col)
     == [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1)]
 
 expect
     repeat 0 { rows: 3, cols: 2 }
-    |> walk [] { direction: Backwards, orientation: Cols } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Backwards, orientation: Cols } \acc, _, { row, col } -> List.append acc (row, col)
     == [(2, 1), (1, 1), (0, 1), (2, 0), (1, 0), (0, 0)]
 
 expect
     repeat 0 { rows: 3, cols: 2 }
-    |> walk [] { direction: Forwards, start: { x: 1, y: 1 } } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Forwards, start: { row: 1, col: 1 } } \acc, _, { row, col } -> List.append acc (row, col)
     == [(1, 1), (2, 0), (2, 1)]
 
 expect
     repeat 0 { rows: 3, cols: 2 }
-    |> walk [] { direction: Backwards, start: { x: 1, y: 1 } } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Backwards, start: { row: 1, col: 1 } } \acc, _, { row, col } -> List.append acc (row, col)
     == [(1, 1), (1, 0), (0, 1), (0, 0)]
 
 expect
     repeat 0 { rows: 3, cols: 2 }
-    |> walk [] { direction: Forwards, start: { x: 10, y: 10 } } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Forwards, start: { row: 10, col: 10 } } \acc, _, { row, col } -> List.append acc (row, col)
     == []
 
 expect
     repeat 0 { rows: 3, cols: 2 }
-    |> walk [] { direction: Backwards, start: { x: 10, y: 10 } } \acc, _, { x, y } -> List.append acc (x, y)
+    |> walk [] { direction: Backwards, start: { row: 10, col: 10 } } \acc, _, { row, col } -> List.append acc (row, col)
     == [(2, 1), (2, 0), (1, 1), (1, 0), (0, 1), (0, 0)]
 
 ## Similar to `Array2D.walk`, but the `step` function either continues walking
@@ -569,7 +569,7 @@ walkUntil = \array, startState, options, fn ->
     # array bounds. In this case start at the last valid index.
     boundedStart =
         if direction == Backwards && !(hasIndex array start) then
-            array |> lastIndex |> Result.withDefault { x: 0, y: 0 }
+            array |> lastIndex |> Result.withDefault { row: 0, col: 0 }
         else
             start
 
@@ -630,10 +630,13 @@ firstIndex = \array ->
     if isEmpty array then
         Err ArrayWasEmpty
     else
-        Ok { x: 0, y: 0 }
+        Ok { row: 0, col: 0 }
 
 expect empty {} |> firstIndex == Err ArrayWasEmpty
-expect @Array2D { data: [5, 2, 3, 4], shape: { rows: 2, cols: 2 } } |> firstIndex == Ok { x: 0, y: 0 }
+expect
+    @Array2D { data: [5, 2, 3, 4], shape: { rows: 2, cols: 2 } }
+    |> firstIndex
+    == Ok { row: 0, col: 0 }
 
 ## Return the last index in the array, or `Err ArrayWasEmpty` if the array was
 ## empty.
@@ -643,10 +646,10 @@ lastIndex = \array ->
         Err ArrayWasEmpty
     else
         { rows, cols } = shape array
-        Ok { x: rows - 1, y: cols - 1 }
+        Ok { row: rows - 1, col: cols - 1 }
 
 expect empty {} |> lastIndex == Err ArrayWasEmpty
-expect identity 4 |> lastIndex == Ok { x: 3, y: 3 }
+expect identity 4 |> lastIndex == Ok { row: 3, col: 3 }
 
 ## Convert an array to a flat list of elements.
 toList : Array2D a -> List a
@@ -663,7 +666,7 @@ toLists = \array ->
 
     List.walk xIndicies startState \state, xIndex ->
         startIndex =
-            when listIndexOf { rows, cols } { x: xIndex, y: 0 } is
+            when listIndexOf { rows, cols } { row: xIndex, col: 0 } is
                 Ok listIndex -> listIndex
                 Err OutOfBounds -> crash "Index should not be out of bounds"
 
@@ -713,51 +716,51 @@ expect
     |> Result.map toLists
     == Ok [[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]]
 
-## Swap the position of each element so that their `x` component changes and
-## `y` component stays the same. This exchanges the top row of the array with
+## Swap the position of each element so that their `row` component changes and
+## `col` component stays the same. This exchanges the top row of the array with
 ## the bottom row, the second row with the second to last row, etc.
-flipX : Array2D a -> Array2D a
-flipX = \@Array2D array ->
+flipRows : Array2D a -> Array2D a
+flipRows = \@Array2D array ->
     startAcc = @Array2D array
     List.walkWithIndex array.data startAcc \acc, elem, listIndex ->
         newIndex =
             listIndex
             |> arrayIndexOf array.shape
-            |> flipIndex array.shape X
+            |> flipIndex array.shape Row
 
         set acc newIndex elem
 
 expect
     [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
     |> fromExactLists
-    |> Result.map flipX
+    |> Result.map flipRows
     |> Result.map toLists
     == Ok [[9, 10, 11, 12], [5, 6, 7, 8], [1, 2, 3, 4]]
 
-## Swap the position of each element so that their `y` component changes and
-## `x` component stays the same. This exchanges the first element of each row
+## Swap the position of each element so that their `col` component changes and
+## `row` component stays the same. This exchanges the first element of each row
 ## with the last element of the row, the second element with the second to last
 ## element, etc.
-flipY : Array2D a -> Array2D a
-flipY = \@Array2D array ->
+flipCols : Array2D a -> Array2D a
+flipCols = \@Array2D array ->
     startAcc = @Array2D array
     List.walkWithIndex array.data startAcc \acc, elem, listIndex ->
         newIndex =
             listIndex
             |> arrayIndexOf array.shape
-            |> flipIndex array.shape Y
+            |> flipIndex array.shape Col
 
         set acc newIndex elem
 
 expect
     [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
     |> fromExactLists
-    |> Result.map flipY
+    |> Result.map flipCols
     |> Result.map toLists
     == Ok [[4, 3, 2, 1], [8, 7, 6, 5], [12, 11, 10, 9]]
 
-## Rotate every array element clockwise 90 degrees. This swaps the X and Y
-## dimensions of the array.
+## Rotate every array element clockwise 90 degrees. This swaps the dimensions
+## of the array.
 rotateClockwise : Array2D a -> Array2D a
 rotateClockwise = \@Array2D array ->
     newShape = { rows: array.shape.cols, cols: array.shape.rows }
@@ -767,7 +770,7 @@ rotateClockwise = \@Array2D array ->
             listIndex
             |> arrayIndexOf array.shape
             |> flipIndex array.shape Diagonal
-            |> flipIndex newShape Y
+            |> flipIndex newShape Col
 
         set acc newIndex elem
 
@@ -778,8 +781,8 @@ expect
     |> Result.map toLists
     == Ok [[9, 5, 1], [10, 6, 2], [11, 7, 3], [12, 8, 4]]
 
-## Rotate every array element counter-clockwise 90 degrees. This swaps the X
-## and Y dimensions of the array.
+## Rotate every array element counter-clockwise 90 degrees. This swaps the
+## dimensions of the array.
 rotateCounterClockwise : Array2D a -> Array2D a
 rotateCounterClockwise = \@Array2D array ->
     newShape = { rows: array.shape.cols, cols: array.shape.rows }
@@ -789,7 +792,7 @@ rotateCounterClockwise = \@Array2D array ->
             listIndex
             |> arrayIndexOf array.shape
             |> flipIndex array.shape Diagonal
-            |> flipIndex newShape X
+            |> flipIndex newShape Row
 
         set acc newIndex elem
 
@@ -842,23 +845,23 @@ expect
 subarray : Array2D a, Index, Index -> Array2D a
 subarray = \array, firstCorner, secondCorner ->
     topLeft = {
-        x: Num.min firstCorner.x secondCorner.x,
-        y: Num.min firstCorner.y secondCorner.y,
+        row: Num.min firstCorner.row secondCorner.row,
+        col: Num.min firstCorner.col secondCorner.col,
     }
 
     if hasIndex array topLeft then
-        limit = lastIndex array |> Result.withDefault { x: 0, y: 0 }
+        limit = lastIndex array |> Result.withDefault { row: 0, col: 0 }
 
         bottomRight = {
-            x: Num.max firstCorner.x secondCorner.x |> Num.min limit.x,
-            y: Num.max firstCorner.y secondCorner.y |> Num.min limit.y,
+            row: Num.max firstCorner.row secondCorner.row |> Num.min limit.row,
+            col: Num.max firstCorner.col secondCorner.col |> Num.min limit.col,
         }
 
-        rows = bottomRight.x - topLeft.x + 1
-        cols = bottomRight.y - topLeft.y + 1
+        rows = bottomRight.row - topLeft.row + 1
+        cols = bottomRight.col - topLeft.col + 1
 
-        init { rows, cols } \{ x, y } ->
-            when get array { x: topLeft.x + x, y: topLeft.y + y } is
+        init { rows, cols } \{ row, col } ->
+            when get array { row: topLeft.row + row, col: topLeft.col + col } is
                 Ok elem -> elem
                 Err OutOfBounds -> crash "Unexpected error creating subarray"
     else
@@ -866,49 +869,49 @@ subarray = \array, firstCorner, secondCorner ->
 
 expect
     fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
-    |> subarray { x: 0, y: 1 } { x: 2, y: 2 }
+    |> subarray { row: 0, col: 1 } { row: 2, col: 2 }
     |> toLists
     == [[2, 3], [5, 6], [8, 9]]
 
 expect
     fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
-    |> subarray { x: 2, y: 2 } { x: 0, y: 1 }
+    |> subarray { row: 2, col: 2 } { row: 0, col: 1 }
     |> toLists
     == [[2, 3], [5, 6], [8, 9]]
 
 expect
     fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
-    |> subarray { x: 2, y: 1 } { x: 0, y: 2 }
+    |> subarray { row: 2, col: 1 } { row: 0, col: 2 }
     |> toLists
     == [[2, 3], [5, 6], [8, 9]]
 
 expect
     fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
-    |> subarray { x: 0, y: 2 } { x: 2, y: 1 }
+    |> subarray { row: 0, col: 2 } { row: 2, col: 1 }
     |> toLists
     == [[2, 3], [5, 6], [8, 9]]
 
 expect
     fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
-    |> subarray { x: 0, y: 0 } { x: 10, y: 10 }
+    |> subarray { row: 0, col: 0 } { row: 10, col: 10 }
     |> toLists
     == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
 expect
     fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
-    |> subarray { x: 0, y: 10 } { x: 10, y: 0 }
+    |> subarray { row: 0, col: 10 } { row: 10, col: 0 }
     |> toLists
     == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
 expect
     fromLists [[1, 2, 3], [4, 5, 6], [7, 8, 9]] FitShortest
-    |> subarray { x: 0, y: 2 } { x: 10, y: 10 }
+    |> subarray { row: 0, col: 2 } { row: 10, col: 10 }
     |> toLists
     == [[3], [6], [9]]
 
 expect
     fromLists [[1, 2, 3, 0], [4, 5, 6, 0], [7, 8, 9, 0]] FitShortest
-    |> subarray { x: 5, y: 5 } { x: 10, y: 10 }
+    |> subarray { row: 5, col: 5 } { row: 10, col: 10 }
     |> toLists
     == []
 
@@ -925,9 +928,9 @@ mul = \a, b ->
         sharedIndices = List.range { start: At 0, end: Before shapeA.cols }
 
         product =
-            init { rows: shapeA.rows, cols: shapeB.cols } \{ x, y } ->
+            init { rows: shapeA.rows, cols: shapeB.cols } \{ row, col } ->
                 List.walk sharedIndices 0 \state, index ->
-                    when (get a { x, y: index }, get b { x: index, y }) is
+                    when (get a { row, col: index }, get b { row: index, col }) is
                         (Ok elemA, Ok elemB) -> state + (elemA * elemB)
                         (_, _) -> crash "Unexpected error multiplying arrays"
 
@@ -973,37 +976,37 @@ shapeSize = \{ rows, cols } -> rows * cols
 
 isInShape : Shape, Index -> Bool
 isInShape = \arrayShape, index ->
-    index.x < arrayShape.rows && index.y < arrayShape.cols
+    index.row < arrayShape.rows && index.col < arrayShape.cols
 
 listIndexOf : Shape, Index -> Result Nat [OutOfBounds]
 listIndexOf = \arrayShape, index ->
     if isInShape arrayShape index then
-        Ok ((index.x * arrayShape.cols) + index.y)
+        Ok ((index.row * arrayShape.cols) + index.col)
     else
         Err OutOfBounds
 
 arrayIndexOf : Nat, Shape -> Index
 arrayIndexOf = \index, { cols } ->
-    x = index // cols
-    y = index % cols
-    { x, y }
+    row = index // cols
+    col = index % cols
+    { row, col }
 
-flipIndex : Index, Shape, [X, Y, Diagonal] -> Index
-flipIndex = \{ x, y }, { rows, cols }, axis ->
+flipIndex : Index, Shape, [Row, Col, Diagonal] -> Index
+flipIndex = \{ row, col }, { rows, cols }, axis ->
     when axis is
-        X -> { x: Num.absDiff x (rows - 1), y }
-        Y -> { x, y: Num.absDiff y (cols - 1) }
-        Diagonal -> { x: y, y: x }
+        Row -> { row: Num.absDiff row (rows - 1), col }
+        Col -> { row, col: Num.absDiff col (cols - 1) }
+        Diagonal -> { row: col, col: row }
 
-expect flipIndex { x: 0, y: 0 } { rows: 5, cols: 1 } X == { x: 4, y: 0 }
-expect flipIndex { x: 1, y: 0 } { rows: 5, cols: 1 } X == { x: 3, y: 0 }
-expect flipIndex { x: 2, y: 0 } { rows: 5, cols: 1 } X == { x: 2, y: 0 }
-expect flipIndex { x: 3, y: 0 } { rows: 5, cols: 1 } X == { x: 1, y: 0 }
-expect flipIndex { x: 4, y: 0 } { rows: 5, cols: 1 } X == { x: 0, y: 0 }
-expect flipIndex { x: 0, y: 0 } { rows: 1, cols: 4 } Y == { x: 0, y: 3 }
-expect flipIndex { x: 0, y: 1 } { rows: 1, cols: 4 } Y == { x: 0, y: 2 }
-expect flipIndex { x: 0, y: 2 } { rows: 1, cols: 4 } Y == { x: 0, y: 1 }
-expect flipIndex { x: 0, y: 3 } { rows: 1, cols: 4 } Y == { x: 0, y: 0 }
+expect flipIndex { row: 0, col: 0 } { rows: 5, cols: 1 } Row == { row: 4, col: 0 }
+expect flipIndex { row: 1, col: 0 } { rows: 5, cols: 1 } Row == { row: 3, col: 0 }
+expect flipIndex { row: 2, col: 0 } { rows: 5, cols: 1 } Row == { row: 2, col: 0 }
+expect flipIndex { row: 3, col: 0 } { rows: 5, cols: 1 } Row == { row: 1, col: 0 }
+expect flipIndex { row: 4, col: 0 } { rows: 5, cols: 1 } Row == { row: 0, col: 0 }
+expect flipIndex { row: 0, col: 0 } { rows: 1, cols: 4 } Col == { row: 0, col: 3 }
+expect flipIndex { row: 0, col: 1 } { rows: 1, cols: 4 } Col == { row: 0, col: 2 }
+expect flipIndex { row: 0, col: 2 } { rows: 1, cols: 4 } Col == { row: 0, col: 1 }
+expect flipIndex { row: 0, col: 3 } { rows: 1, cols: 4 } Col == { row: 0, col: 0 }
 
 resize : List a, a, Nat -> List a
 resize = \list, defaultValue, newLen ->
@@ -1018,24 +1021,24 @@ resize = \list, defaultValue, newLen ->
 walkStart : Array2D a, [Forwards, Backwards] -> Index
 walkStart = \array, direction ->
     when direction is
-        Forwards -> { x: 0, y: 0 }
-        Backwards -> array |> lastIndex |> Result.withDefault { x: 0, y: 0 }
+        Forwards -> { row: 0, col: 0 }
+        Backwards -> array |> lastIndex |> Result.withDefault { row: 0, col: 0 }
 
 walkRowsUntil : Array2D a, Index, state, (state, a, Index -> [Continue state, Break state]) -> state
 walkRowsUntil = \array, startIndex, state, fn ->
-    iterate array startIndex state incY fn
+    iterate array startIndex state incCol fn
 
 walkRowsBackwardsUntil : Array2D a, Index, state, (state, a, Index -> [Continue state, Break state]) -> state
 walkRowsBackwardsUntil = \array, startIndex, state, fn ->
-    iterate array startIndex state decY fn
+    iterate array startIndex state decCol fn
 
 walkColsUntil : Array2D a, Index, state, (state, a, Index -> [Continue state, Break state]) -> state
 walkColsUntil = \array, startIndex, state, fn ->
-    iterate array startIndex state incX fn
+    iterate array startIndex state incRow fn
 
 walkColsBackwardsUntil : Array2D a, Index, state, (state, a, Index -> [Continue state, Break state]) -> state
 walkColsBackwardsUntil = \array, startIndex, state, fn ->
-    iterate array startIndex state decX fn
+    iterate array startIndex state decRow fn
 
 iterate : Array2D a, Index, state, (Array2D a, Index -> Result Index [OutOfBounds]), (state, a, Index -> [Continue state, Break state]) -> state
 iterate = \array, index, state, nextIndexFn, nextStateFn ->
@@ -1051,42 +1054,42 @@ iterate = \array, index, state, nextIndexFn, nextStateFn ->
         Err OutOfBounds ->
             state
 
-incY : Array2D *, Index -> Result Index [OutOfBounds]
-incY = \array, index ->
+incCol : Array2D *, Index -> Result Index [OutOfBounds]
+incCol = \array, index ->
     if isRowEnd array index then
         if isColEnd array index then
             Err OutOfBounds
         else
-            Ok { x: index.x + 1, y: 0 }
+            Ok { row: index.row + 1, col: 0 }
     else
-        Ok { x: index.x, y: index.y + 1 }
+        Ok { row: index.row, col: index.col + 1 }
 
-decY : Array2D *, Index -> Result Index [OutOfBounds]
-decY = \@Array2D array, index ->
+decCol : Array2D *, Index -> Result Index [OutOfBounds]
+decCol = \@Array2D array, index ->
     if isRowStart index then
         if isColStart index then
             Err OutOfBounds
         else
-            Ok { x: index.x - 1, y: array.shape.cols - 1 }
+            Ok { row: index.row - 1, col: array.shape.cols - 1 }
     else
-        Ok { x: index.x, y: index.y - 1 }
+        Ok { row: index.row, col: index.col - 1 }
 
-incX : Array2D *, Index -> Result Index [OutOfBounds]
-incX = \array, index ->
+incRow : Array2D *, Index -> Result Index [OutOfBounds]
+incRow = \array, index ->
     if isColEnd array index then
         if isRowEnd array index then
             Err OutOfBounds
         else
-            Ok { x: 0, y: index.y + 1 }
+            Ok { row: 0, col: index.col + 1 }
     else
-        Ok { x: index.x + 1, y: index.y }
+        Ok { row: index.row + 1, col: index.col }
 
-decX : Array2D *, Index -> Result Index [OutOfBounds]
-decX = \@Array2D array, index ->
+decRow : Array2D *, Index -> Result Index [OutOfBounds]
+decRow = \@Array2D array, index ->
     if isColStart index then
         if isRowStart index then
             Err OutOfBounds
         else
-            Ok { x: array.shape.rows - 1, y: index.y - 1 }
+            Ok { row: array.shape.rows - 1, col: index.col - 1 }
     else
-        Ok { x: index.x - 1, y: index.y }
+        Ok { row: index.row - 1, col: index.col }
