@@ -49,7 +49,7 @@ interface Array2D exposes [
 ## Fixed size two dimensional array. Unlike the builtin `List` data type
 ## `Array2D` is fully allocated on creation, with a starting element for each
 ## valid index.
-Array2D a := { data : List a, shape : Shape2D } implements [Eq { isEq: isEq }]
+Array2D a := { data : List a, shape : Shape2D } implements [Eq]
 
 ## Return an empty array with 0 rows, 0 columns, and no elements.
 empty : {} -> Array2D *
@@ -933,9 +933,6 @@ expect
 expect
     a = fromLists [[1, 2, 3], [4, 5, 6]] FitShortest
     mul a (identity 3) == Ok a
-
-isEq : Array2D a, Array2D a -> Bool where a implements Eq
-isEq = \@Array2D a, @Array2D b -> a == b
 
 listIndexOf : Shape2D, Index2D -> Result Nat [OutOfBounds]
 listIndexOf = \arrayShape, index ->
