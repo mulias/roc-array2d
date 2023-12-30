@@ -1,10 +1,11 @@
 interface Array2D exposes [
         Array2D,
         empty,
+        identity,
+        repeat,
         init,
         initWithList,
         initWithLists,
-        repeat,
         fromList,
         fromLists,
         fromExactList,
