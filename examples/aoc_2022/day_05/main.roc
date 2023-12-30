@@ -4,7 +4,7 @@ app "Advent2022Day05"
     packages {
         cli: "https://github.com/roc-lang/basic-cli/releases/download/0.6.2/c7T4Hp8bAdWz3r9ZrhboBzibCjJag8d0IP_ljb42yVc.tar.br",
         parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.2.0/dJQSsSmorujhiPNIvJKlQoI92RFIG_JQwUfIxZsCSwE.tar.br",
-        array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.1.0/ssMT0bDIv-qE7d_yNUyCByGQHvpNkQJZsGUS6xEFsIY.tar.br",
+        array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.2.0/pmAttjSPjyubNa8XiVH9D3vsDMqHahq_yz81N_tt_UU.tar.br",
     }
     imports [
         cli.Stdout,
@@ -12,6 +12,8 @@ app "Advent2022Day05"
         parser.Core.{ Parser, between, sepBy1, chompWhile, keep, skip, const, map, oneOf, buildPrimitiveParser, parsePartial, fail },
         parser.String.{ RawStr, parseStr, string, codeunit, digits, anyCodeunit },
         array2d.Array2D.{ Array2D },
+        array2d.Shape2D,
+        array2d.Index2D,
         "example.txt" as exampleInput : Str,
     ]
     provides [main] to cli

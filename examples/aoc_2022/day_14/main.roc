@@ -3,22 +3,24 @@
 app "Advent2022Day14"
     packages {
         cli: "https://github.com/roc-lang/basic-cli/releases/download/0.6.2/c7T4Hp8bAdWz3r9ZrhboBzibCjJag8d0IP_ljb42yVc.tar.br",
-        array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.1.0/ssMT0bDIv-qE7d_yNUyCByGQHvpNkQJZsGUS6xEFsIY.tar.br",
+        array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.2.0/pmAttjSPjyubNa8XiVH9D3vsDMqHahq_yz81N_tt_UU.tar.br",
     }
     imports [
         cli.Stdout,
         cli.Task,
         array2d.Array2D.{ Array2D },
+        array2d.Shape2D,
+        array2d.Index2D.{ Index2D },
         "example.txt" as exampleInput : Str,
     ]
     provides [main] to cli
 
 # Offset makes it easier to display the results
-offsetY = 300
+offsetCols = 300
 
-caveDimensions = { dimX: 170, dimY: 700 - offsetY }
+caveDimensions = { rows: 170, cols: 700 - offsetCols }
 
-sandSource = { x: 0, y: 500 - offsetY }
+sandSource = { row: 0, col: 500 - offsetCols }
 exampleCave = initCave exampleInput
 
 expect exampleCave |> addMaxSand |> countSand == 24
@@ -39,7 +41,7 @@ main =
 
 Cave : Array2D [Air, Rock, Sand]
 
-Path : List Array2D.Index
+Path : List Index2D
 
 addMaxSand : Cave -> Cave
 addMaxSand = \cave ->
@@ -47,7 +49,7 @@ addMaxSand = \cave ->
         Ok sandyCave -> addMaxSand sandyCave
         Err _ -> cave
 
-addSand : Cave, Array2D.Index -> Result Cave [SandFellIntoTheInfiniteAbyss, Blocked]
+addSand : Cave, Index2D -> Result Cave [SandFellIntoTheInfiniteAbyss, Blocked]
 addSand = \cave, pos ->
     when Array2D.get cave pos is
         Err OutOfBounds -> Err SandFellIntoTheInfiniteAbyss
@@ -63,9 +65,9 @@ elseIfBlocked = \result, thunk ->
         Err Blocked -> thunk {}
         _ -> result
 
-down = \{ x, y } -> { x: x + 1, y }
-downLeft = \{ x, y } -> { x: x + 1, y: y - 1 }
-downRight = \{ x, y } -> { x: x + 1, y: y + 1 }
+down = \{ row, col } -> { row: row + 1, col }
+downLeft = \{ row, col } -> { row: row + 1, col: col - 1 }
+downRight = \{ row, col } -> { row: row + 1, col: col + 1 }
 
 countSand : Cave -> Nat
 countSand = \cave -> Array2D.countIf cave \material -> material == Sand
@@ -85,14 +87,14 @@ toPaths = \input ->
         |> Str.split " -> "
         |> List.map toPoint
 
-toPoint : Str -> Array2D.Index
+toPoint : Str -> Index2D
 toPoint = \input ->
     when Str.split input "," is
-        [strY, strX] ->
-            x = strX |> Str.toNat |> orCrash "Expected a number"
-            y = strY |> Str.toNat |> orCrash "Expected a number"
+        [strCol, strRow] ->
+            row = strRow |> Str.toNat |> orCrash "Expected a number"
+            col = strCol |> Str.toNat |> orCrash "Expected a number"
 
-            { x, y: y - offsetY }
+            { row, col: col - offsetCols }
 
         _ -> crash "Expected a point: \(input)"
 
@@ -106,26 +108,26 @@ setRockPath = \cave, path ->
 
         _ -> cave
 
-addRockLineSegment : Cave, Array2D.Index, Array2D.Index -> Cave
+addRockLineSegment : Cave, Index2D, Index2D -> Cave
 addRockLineSegment = \cave, point1, point2 ->
-    if point1.x == point2.x && point1.y != point2.y then
+    if point1.row == point2.row && point1.col != point2.col then
         # vertical line
-        x = point1.x
-        startY = Num.min point1.y point2.y
-        endY = Num.max point1.y point2.y
+        row = point1.row
+        startCol = Num.min point1.col point2.col
+        endCol = Num.max point1.col point2.col
 
-        { start: At startY, end: At endY }
+        { start: At startCol, end: At endCol }
         |> List.range
-        |> List.walk cave \state, y -> Array2D.set state { x, y } Rock
-    else if point1.x != point2.x && point1.y == point2.y then
+        |> List.walk cave \state, col -> Array2D.set state { row, col } Rock
+    else if point1.row != point2.row && point1.col == point2.col then
         # horizontal line
-        y = point1.y
-        startX = Num.min point1.x point2.x
-        endX = Num.max point1.x point2.x
+        col = point1.col
+        startRow = Num.min point1.row point2.row
+        endRow = Num.max point1.row point2.row
 
-        { start: At startX, end: At endX }
+        { start: At startRow, end: At endRow }
         |> List.range
-        |> List.walk cave \state, x -> Array2D.set state { x, y } Rock
+        |> List.walk cave \state, row -> Array2D.set state { row, col } Rock
     else
         crash "Diagonal lines not supported"
 
@@ -133,9 +135,9 @@ addFloor : Cave -> Cave
 addFloor = \cave ->
     cave
     |> Array2D.findLastIndex \material -> material == Rock
-    |> Result.map \{ x: floorLevel, y: _ } ->
-        point1 = { x: floorLevel + 2, y: 0 }
-        point2 = { x: floorLevel + 2, y: cave |> Array2D.shape |> .dimY }
+    |> Result.map \{ row: floorLevel, col: _ } ->
+        point1 = { row: floorLevel + 2, col: 0 }
+        point2 = { row: floorLevel + 2, col: cave |> Array2D.shape |> .cols }
         addRockLineSegment cave point1 point2
     |> orCrash "Error finding floor level"
 
