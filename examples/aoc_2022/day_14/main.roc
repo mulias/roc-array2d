@@ -1,19 +1,16 @@
 # Advent of Code 2022 Day 14
 # https://adventofcode.com/2022/day/14
-app "Advent2022Day14"
-    packages {
-        cli: "https://github.com/roc-lang/basic-cli/releases/download/0.6.2/c7T4Hp8bAdWz3r9ZrhboBzibCjJag8d0IP_ljb42yVc.tar.br",
-        array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.2.0/pmAttjSPjyubNa8XiVH9D3vsDMqHahq_yz81N_tt_UU.tar.br",
-    }
-    imports [
-        cli.Stdout,
-        cli.Task,
-        array2d.Array2D.{ Array2D },
-        array2d.Shape2D,
-        array2d.Index2D.{ Index2D },
-        "example.txt" as exampleInput : Str,
-    ]
-    provides [main] to cli
+app [main] {
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
+    array2d: "../../../package/main.roc",
+    array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.3.0/je3X2cSdUa6b24fO1SS_vGNS5MwU-a-3r1niP_7iG6k.tar.br",
+}
+
+import cli.Stdout
+import cli.Task exposing [Task]
+import array2d.Array2D exposing [Array2D]
+import array2d.Index2D exposing [Index2D]
+import "example.txt" as exampleInput : Str
 
 # Offset makes it easier to display the results
 offsetCols = 300
@@ -33,11 +30,10 @@ main =
     part2Cave = exampleCave |> addFloor |> addMaxSand
     part2Count = part2Cave |> countSand |> Num.toStr
 
-    _ <- Stdout.line "Part 1: \(part1Count)" |> Task.await
-    _ <- Stdout.write "\(displayCave part1Cave)\n\n" |> Task.await
-    _ <- Stdout.line "Part 2: \(part2Count)" |> Task.await
-    _ <- Stdout.write "\(displayCave part2Cave)\n\n" |> Task.await
-    Task.ok {}
+    Stdout.line! "Part 1: $(part1Count)"
+    Stdout.line! "$(displayCave part1Cave)\n"
+    Stdout.line! "Part 2: $(part2Count)"
+    Stdout.line! "$(displayCave part2Cave)\n"
 
 Cave : Array2D [Air, Rock, Sand]
 
@@ -69,7 +65,7 @@ down = \{ row, col } -> { row: row + 1, col }
 downLeft = \{ row, col } -> { row: row + 1, col: col - 1 }
 downRight = \{ row, col } -> { row: row + 1, col: col + 1 }
 
-countSand : Cave -> Nat
+countSand : Cave -> U64
 countSand = \cave -> Array2D.countIf cave \material -> material == Sand
 
 initCave : Str -> Cave
@@ -91,12 +87,12 @@ toPoint : Str -> Index2D
 toPoint = \input ->
     when Str.split input "," is
         [strCol, strRow] ->
-            row = strRow |> Str.toNat |> orCrash "Expected a number"
-            col = strCol |> Str.toNat |> orCrash "Expected a number"
+            row = strRow |> Str.toU64 |> orCrash "Expected a number"
+            col = strCol |> Str.toU64 |> orCrash "Expected a number"
 
             { row, col: col - offsetCols }
 
-        _ -> crash "Expected a point: \(input)"
+        _ -> crash "Expected a point: $(input)"
 
 setRockPath : Cave, Path -> Cave
 setRockPath = \cave, path ->

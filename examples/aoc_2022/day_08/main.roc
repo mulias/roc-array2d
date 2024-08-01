@@ -1,22 +1,18 @@
 # Advent of Code 2022 Day 8
 # https://adventofcode.com/2022/day/8
-app "Advent2022Day08"
-    packages {
-        cli: "https://github.com/roc-lang/basic-cli/releases/download/0.6.2/c7T4Hp8bAdWz3r9ZrhboBzibCjJag8d0IP_ljb42yVc.tar.br",
-        parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.2.0/dJQSsSmorujhiPNIvJKlQoI92RFIG_JQwUfIxZsCSwE.tar.br",
-        array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.2.0/pmAttjSPjyubNa8XiVH9D3vsDMqHahq_yz81N_tt_UU.tar.br",
-    }
-    imports [
-        cli.Stdout,
-        cli.Task,
-        parser.Core.{ Parser, map, between, chompWhile, sepBy1, oneOrMore },
-        parser.String.{ RawStr, parseStr, string, digit },
-        array2d.Array2D.{ Array2D },
-        array2d.Shape2D,
-        array2d.Index2D.{ Index2D },
-        "example.txt" as exampleInput : Str,
-    ]
-    provides [main] to cli
+app [main] {
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
+    parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.7.1/MvLlME9RxOBjl0QCxyn3LIaoG9pSlaNxCa-t3BfbPNc.tar.br",
+    array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.3.0/je3X2cSdUa6b24fO1SS_vGNS5MwU-a-3r1niP_7iG6k.tar.br",
+}
+
+import cli.Stdout
+import cli.Task exposing [Task]
+import parser.Core exposing [Parser, map, between, chompWhile, sepBy1, oneOrMore]
+import parser.String exposing [parseStr, string, digit]
+import array2d.Array2D exposing [Array2D]
+import array2d.Index2D exposing [Index2D]
+import "example.txt" as exampleInput : Str
 
 exampleTreeHeights = parseInput exampleInput
 
@@ -29,17 +25,16 @@ main =
     sightLines = treeSightLines exampleTreeHeights
     scenicTree = mostScenicTree sightLines
 
-    _ <- Stdout.line "Part 1: \(visibilities |> countVisible |> Num.toStr)" |> Task.await
-    _ <- Stdout.write "\(displayVisibilityMap visibilities)\n\n" |> Task.await
-    _ <- Stdout.line "Part 2: \(scenicTree |> scenicScore |> Num.toStr)" |> Task.await
-    _ <- Stdout.write "\(displayScenicTreeMap exampleTreeHeights scenicTree)\n\n" |> Task.await
-    Task.ok {}
+    Stdout.line! "Part 1: $(visibilities |> countVisible |> Num.toStr)"
+    Stdout.line! "$(displayVisibilityMap visibilities)\n"
+    Stdout.line! "Part 2: $(scenicTree |> scenicScore |> Num.toStr)"
+    Stdout.line! "$(displayScenicTreeMap exampleTreeHeights scenicTree)\n"
 
-HeightMap : Array2D Nat
+HeightMap : Array2D U64
 
 VisibilityMap : Array2D Bool
 
-TreeSightLines : { index : Index2D, left : Nat, right : Nat, up : Nat, down : Nat }
+TreeSightLines : { index : Index2D, left : U64, right : U64, up : U64, down : U64 }
 
 SightLinesMap : Array2D TreeSightLines
 
@@ -102,7 +97,7 @@ visibleTrees = \heightMap ->
 
     finalState.visibilityMap
 
-countVisible : VisibilityMap -> Nat
+countVisible : VisibilityMap -> U64
 countVisible = \treeVisibilities -> Array2D.countIf treeVisibilities \visible -> visible
 
 displayVisibilityMap : VisibilityMap -> Str
@@ -181,7 +176,7 @@ mostScenicTree = \trees ->
         else
             state
 
-scenicScore : TreeSightLines -> Nat
+scenicScore : TreeSightLines -> U64
 scenicScore = \{ left, right, up, down } -> left * right * up * down
 
 displayScenicTreeMap : HeightMap, TreeSightLines -> Str
@@ -207,7 +202,7 @@ displayScenicTreeMap = \heightMap, { index, right, left, up, down } ->
 
     joinArrayWith withAll "" "\n"
 
-parseInput : Str -> Array2D Nat
+parseInput : Str -> Array2D U64
 parseInput = \inputStr ->
     parser =
         oneOrMore digit
@@ -220,8 +215,8 @@ parseInput = \inputStr ->
 
     when parseStr parser inputStr is
         Ok treeHeights -> treeHeights
-        Err (ParsingFailure msg) -> crash "parsing failure '\(msg)'"
-        Err (ParsingIncomplete leftover) -> crash "parsing incomplete '\(leftover)'"
+        Err (ParsingFailure msg) -> crash "parsing failure '$(msg)'"
+        Err (ParsingIncomplete leftover) -> crash "parsing incomplete '$(leftover)'"
 
 isWhitespace : U8 -> Bool
 isWhitespace = \char ->

@@ -1,22 +1,17 @@
 # Advent of Code 2022 Day 5
 # https://adventofcode.com/2022/day/5
-app "Advent2022Day05"
-    packages {
-        cli: "https://github.com/roc-lang/basic-cli/releases/download/0.6.2/c7T4Hp8bAdWz3r9ZrhboBzibCjJag8d0IP_ljb42yVc.tar.br",
-        parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.2.0/dJQSsSmorujhiPNIvJKlQoI92RFIG_JQwUfIxZsCSwE.tar.br",
-        array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.2.0/pmAttjSPjyubNa8XiVH9D3vsDMqHahq_yz81N_tt_UU.tar.br",
-    }
-    imports [
-        cli.Stdout,
-        cli.Task,
-        parser.Core.{ Parser, between, sepBy1, chompWhile, keep, skip, const, map, oneOf, buildPrimitiveParser, parsePartial, fail },
-        parser.String.{ RawStr, parseStr, string, codeunit, digits, anyCodeunit },
-        array2d.Array2D.{ Array2D },
-        array2d.Shape2D,
-        array2d.Index2D,
-        "example.txt" as exampleInput : Str,
-    ]
-    provides [main] to cli
+app [main] {
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
+    parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.7.1/MvLlME9RxOBjl0QCxyn3LIaoG9pSlaNxCa-t3BfbPNc.tar.br",
+    array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.3.0/je3X2cSdUa6b24fO1SS_vGNS5MwU-a-3r1niP_7iG6k.tar.br",
+}
+
+import cli.Stdout
+import cli.Task exposing [Task]
+import parser.Core exposing [Parser, between, sepBy1, chompWhile, keep, skip, const, map, oneOf, buildPrimitiveParser, parsePartial, fail]
+import parser.String exposing [Utf8, parseStr, string, codeunit, digits, anyCodeunit]
+import array2d.Array2D exposing [Array2D]
+import "example.txt" as exampleInput : Str
 
 CraneSpec : [CrateMover9000, CrateMover9001]
 
@@ -24,26 +19,25 @@ Crate : Str
 
 Stack : List Crate
 
-StackId : Nat
+StackId : U64
 
 Stacks : Dict StackId Stack
 
-Step : { count : Nat, source : StackId, dest : StackId }
+Step : { count : U64, source : StackId, dest : StackId }
 
 Input : { stacks : Stacks, steps : List Step }
 
-expect exampleInput |> parseInput |> finalState CrateMover9000 |> topCrates == "CMZ"
-expect exampleInput |> parseInput |> finalState CrateMover9001 |> topCrates == "MCD"
+expect exampleInput |> parseInput |> finalState CrateMover9000 |> topCrates == "ZMN"
+expect exampleInput |> parseInput |> finalState CrateMover9001 |> topCrates == "DCN"
 
 main =
     part1 = exampleInput |> parseInput |> finalState CrateMover9000
     part2 = exampleInput |> parseInput |> finalState CrateMover9001
 
-    _ <- Stdout.line "Part 1: \(topCrates part1)" |> Task.await
-    _ <- Stdout.write "\(displayStacks part1)\n\n" |> Task.await
-    _ <- Stdout.line "Part 2: \(topCrates part2)" |> Task.await
-    _ <- Stdout.write "\(displayStacks part2)\n\n" |> Task.await
-    Task.ok {}
+    Stdout.line! "Part 1: $(topCrates part1)"
+    Stdout.line! "$(displayStacks part1)\n"
+    Stdout.line! "Part 2: $(topCrates part2)"
+    Stdout.line! "$(displayStacks part2)\n"
 
 topCrates : Stacks -> Str
 topCrates = \stacks ->
@@ -78,7 +72,7 @@ performStep = \stacks, step, craneSpec ->
 
 getStack : Stacks, StackId -> Stack
 getStack = \stacks, stackId ->
-    stacks |> Dict.get stackId |> orCrash "can't find stack #\(Num.toStr stackId)"
+    stacks |> Dict.get stackId |> orCrash "can't find stack #$(Num.toStr stackId)"
 
 displayStacks : Stacks -> Str
 displayStacks = \stacks ->
@@ -89,7 +83,7 @@ displayStacks = \stacks ->
     |> Array2D.rotateCounterClockwise
     |> Array2D.map \elem ->
         when elem is
-            Ok crate -> "[\(crate)]"
+            Ok crate -> "[$(crate)]"
             Err Empty -> "   "
     |> joinArrayWith " " "\n"
 
@@ -104,10 +98,10 @@ parseInput : Str -> Input
 parseInput = \inputStr ->
     when parseStr inputParser inputStr is
         Ok input -> input
-        Err (ParsingFailure msg) -> crash "parsing failure '\(msg)'"
-        Err (ParsingIncomplete leftover) -> crash "parsing incomplete '\(leftover)'"
+        Err (ParsingFailure msg) -> crash "parsing failure '$(msg)'"
+        Err (ParsingIncomplete leftover) -> crash "parsing incomplete '$(leftover)'"
 
-inputParser : Parser RawStr Input
+inputParser : Parser Utf8 Input
 inputParser =
     const (\stacks -> \steps -> { stacks, steps })
     |> keep stacksParser
@@ -115,7 +109,7 @@ inputParser =
     |> keep stepsParser
     |> skip optionalWhitespace
 
-stacksParser : Parser RawStr Stacks
+stacksParser : Parser Utf8 Stacks
 stacksParser =
     const
         (\crateCols -> \labels ->
@@ -127,7 +121,7 @@ stacksParser =
     |> skip optionalWhitespace
     |> keep labelsParser
 
-crateColsParser : Parser RawStr (List (List Crate))
+crateColsParser : Parser Utf8 (List (List Crate))
 crateColsParser =
     map crateRowsParser \rows ->
         rows
@@ -136,7 +130,7 @@ crateColsParser =
         |> List.map \cols ->
             List.keepOks cols \col -> col
 
-crateRowsParser : Parser RawStr (Array2D (Result Crate [Empty]))
+crateRowsParser : Parser Utf8 (Array2D (Result Crate [Empty]))
 crateRowsParser =
     table
         (oneOf [crateParser, noCrateParser])
@@ -157,17 +151,17 @@ crateParser =
 
 noCrateParser = string "   " |> map \_ -> Err Empty
 
-labelsParser : Parser RawStr (List Nat)
+labelsParser : Parser Utf8 (List U64)
 labelsParser =
     digits
     |> sepBy1 optionalWhitespace
     |> between optionalWhitespace optionalWhitespace
 
-stepsParser : Parser RawStr (List Step)
+stepsParser : Parser Utf8 (List Step)
 stepsParser =
     sepBy1 stepParser optionalWhitespace
 
-stepParser : Parser RawStr Step
+stepParser : Parser Utf8 Step
 stepParser =
     const (\count -> \source -> \dest -> { count, source, dest })
     |> skip (string "move ")
@@ -188,7 +182,7 @@ isWhitespace = \char ->
         '\r' -> Bool.true
         _ -> Bool.false
 
-optionalWhitespace : Parser RawStr RawStr
+optionalWhitespace : Parser Utf8 Utf8
 optionalWhitespace =
     chompWhile isWhitespace
 
@@ -205,10 +199,9 @@ table = \elem, elemSep, rowSep ->
 andThen : Parser input a, (a -> Parser input b) -> Parser input b
 andThen = \firstParser, buildNextParser ->
     fun = \input ->
-        { val: firstVal, input: rest } <- Result.try (parsePartial firstParser input)
-        nextParser = buildNextParser firstVal
-
-        parsePartial nextParser rest
+        Result.try (parsePartial firstParser input) \{ val: firstVal, input: rest } ->
+            nextParser = buildNextParser firstVal
+            parsePartial nextParser rest
 
     buildPrimitiveParser fun
 
