@@ -22,9 +22,9 @@ interface Index2D exposes [
     ]
 
 ## Two-dimensional index for referencing elements in an `Array2D`.
-Index2D : { row : Nat, col : Nat }
+Index2D : { row : U64, col : U64 }
 
-## Add two indices, returning a new index with the sum of the two `row` values
+## Add indices, returning a new index with the sum of the two `row` values
 ## and sum of the two `col` values as component parts. If the resulting index
 ## is not within the array shape then return `Err OutOfBounds`.
 add : Index2D, Index2D, Shape2D -> Result Index2D [OutOfBounds]
@@ -39,9 +39,9 @@ add = \indexA, indexB, shape ->
     else
         Err OutOfBounds
 
-## Add two indices, returning a new index with the difference of the two `row` values
-## and difference of the two `col` values as component parts. If the resulting
-## index is not within the array shape then return `Err OutOfBounds`.
+## Subtract indices, returning a new index with the difference of the two `row`
+## values and difference of the two `col` values as component parts. If the
+## resulting index is not within the array shape then return `Err OutOfBounds`.
 sub : Index2D, Index2D, Shape2D -> Result Index2D [OutOfBounds]
 sub = \indexA, indexB, shape ->
     result =

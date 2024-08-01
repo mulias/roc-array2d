@@ -59,7 +59,7 @@ expect empty {} |> toList |> List.len == 0
 
 ## Return an [identity matrix](https://en.wikipedia.org/wiki/Identity_matrix)
 ## with the specified number of `1`s along the diagonal.
-identity : Nat -> Array2D (Num *)
+identity : U64 -> Array2D (Num *)
 identity = \ones ->
     init { rows: ones, cols: ones } \{ row, col } -> if row == col then 1 else 0
 
@@ -259,7 +259,7 @@ expect repeat 0 { rows: 3, cols: 4 } |> shape == { rows: 3, cols: 4 }
 expect empty {} |> shape == { rows: 0, cols: 0 }
 
 ## Get the total number of elements in an array.
-size : Array2D * -> Nat
+size : Array2D * -> U64
 size = \@Array2D array -> Shape2D.size array.shape
 
 expect repeat 0 { rows: 3, cols: 4 } |> size == 12
@@ -765,7 +765,7 @@ expect
 
 ## Run the given function on each element of an array and return the number of
 ## elements for which the function returned Bool.true.
-countIf : Array2D a, (a -> Bool) -> Nat
+countIf : Array2D a, (a -> Bool) -> U64
 countIf = \@Array2D array, fn -> List.countIf array.data fn
 
 ## Return the index of the first element in the array satisfying a predicate
@@ -934,18 +934,18 @@ expect
     a = fromLists [[1, 2, 3], [4, 5, 6]] FitShortest
     mul a (identity 3) == Ok a
 
-listIndexOf : Shape2D, Index2D -> Result Nat [OutOfBounds]
+listIndexOf : Shape2D, Index2D -> Result U64 [OutOfBounds]
 listIndexOf = \arrayShape, index ->
     if Shape2D.hasIndex arrayShape index then
         Ok ((index.row * arrayShape.cols) + index.col)
     else
         Err OutOfBounds
 
-arrayIndexOf : Nat, Shape2D -> Index2D
+arrayIndexOf : U64, Shape2D -> Index2D
 arrayIndexOf = \index, { cols } ->
     { row: index // cols, col: index % cols }
 
-resize : List a, a, Nat -> List a
+resize : List a, a, U64 -> List a
 resize = \list, defaultValue, newLen ->
     oldLen = List.len list
     if newLen < oldLen then
