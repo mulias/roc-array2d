@@ -385,9 +385,9 @@ expect
 swap : Array2D a, Index2D, Index2D -> Array2D a
 swap = \@Array2D array, indexA, indexB ->
     result =
-        listIndexA <- listIndexOf array.shape indexA |> Result.try
-        listIndexB <- listIndexOf array.shape indexB |> Result.map
-        @Array2D { array & data: List.swap array.data listIndexA listIndexB }
+        listIndexOf array.shape indexA |> Result.try \listIndexA ->
+            listIndexOf array.shape indexB |> Result.map \listIndexB ->
+                @Array2D { array & data: List.swap array.data listIndexA listIndexB }
 
     result |> Result.withDefault (@Array2D array)
 
