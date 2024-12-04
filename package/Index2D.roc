@@ -1,25 +1,25 @@
-interface Index2D exposes [
-        Index2D,
-        add,
-        sub,
-        incRow,
-        incCol,
-        decRow,
-        decCol,
-        adjacentTo,
-        allAdjacentTo,
-        flipRow,
-        flipCol,
-        transpose,
-        first,
-        last,
-        isRowStart,
-        isRowEnd,
-        isColStart,
-        isColEnd,
-    ] imports [
-        Shape2D.{ Shape2D },
-    ]
+module [
+    Index2D,
+    add,
+    sub,
+    incRow,
+    incCol,
+    decRow,
+    decCol,
+    adjacentTo,
+    allAdjacentTo,
+    flipRow,
+    flipCol,
+    transpose,
+    first,
+    last,
+    isRowStart,
+    isRowEnd,
+    isColStart,
+    isColEnd,
+]
+
+import Shape2D exposing [Shape2D]
 
 ## Two-dimensional index for referencing elements in an `Array2D`.
 Index2D : { row : U64, col : U64 }
@@ -45,15 +45,17 @@ add = \indexA, indexB, shape ->
 sub : Index2D, Index2D, Shape2D -> Result Index2D [OutOfBounds]
 sub = \indexA, indexB, shape ->
     result =
-        row <- Num.subChecked indexA.row indexB.row |> Result.try
-        col <- Num.subChecked indexA.col indexB.col |> Result.try
+        Num.subChecked indexA.row indexB.row
+        |> Result.try \row ->
+            Num.subChecked indexA.col indexB.col
+            |> Result.try \col ->
 
-        indexDif = { row, col }
+                indexDif = { row, col }
 
-        if Shape2D.hasIndex shape indexDif then
-            Ok indexDif
-        else
-            Err OutOfBounds
+                if Shape2D.hasIndex shape indexDif then
+                    Ok indexDif
+                else
+                    Err OutOfBounds
 
     result |> Result.mapErr \_ -> OutOfBounds
 

@@ -1,9 +1,9 @@
-interface Shape2D exposes [
-        Shape2D,
-        isEmpty,
-        hasIndex,
-        size,
-    ] imports []
+module [
+    Shape2D,
+    isEmpty,
+    hasIndex,
+    size,
+]
 
 ## Dimensions of an `Array2D` where `rows` is the total number of rows and
 ## `cols` is that total number of columns.
