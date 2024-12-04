@@ -1,14 +1,13 @@
 # Advent of Code 2022 Day 5
 # https://adventofcode.com/2022/day/5
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
-    parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.7.1/MvLlME9RxOBjl0QCxyn3LIaoG9pSlaNxCa-t3BfbPNc.tar.br",
-    array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.3.0/je3X2cSdUa6b24fO1SS_vGNS5MwU-a-3r1niP_7iG6k.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.17.0/lZFLstMUCUvd5bjnnpYromZJXkQUrdhbva4xdBInicE.tar.br",
+    parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.9.0/w8YKp2YAgQt5REYk912HfKAHBjcXsrnvtjI0CBzoAT4.tar.br",
+    array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.3.1/2Jqajvxn36vRryyQBSluU6Fo6vVI5yNSYmcJcyaKp0Y.tar.br",
 }
 
 import cli.Stdout
-import cli.Task exposing [Task]
-import parser.Core exposing [Parser, between, sepBy1, chompWhile, keep, skip, const, map, oneOf, buildPrimitiveParser, parsePartial, fail]
+import parser.Parser exposing [Parser, between, sepBy1, chompWhile, keep, skip, const, map, oneOf, buildPrimitiveParser, parsePartial, fail]
 import parser.String exposing [Utf8, parseStr, string, codeunit, digits, anyCodeunit]
 import array2d.Array2D exposing [Array2D]
 import "example.txt" as exampleInput : Str
@@ -59,7 +58,7 @@ performStep = \stacks, step, craneSpec ->
     destStack = getStack stacks step.dest
     splitIndex = (List.len sourceStack) - step.count
 
-    { before: newSourceStack, others: movedCrates } = List.split sourceStack splitIndex
+    { before: newSourceStack, others: movedCrates } = List.splitAt sourceStack splitIndex
 
     newDestStack =
         when craneSpec is

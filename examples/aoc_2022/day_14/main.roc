@@ -1,13 +1,12 @@
 # Advent of Code 2022 Day 14
 # https://adventofcode.com/2022/day/14
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
-    array2d: "../../../package/main.roc",
-    array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.3.0/je3X2cSdUa6b24fO1SS_vGNS5MwU-a-3r1niP_7iG6k.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.17.0/lZFLstMUCUvd5bjnnpYromZJXkQUrdhbva4xdBInicE.tar.br",
+    parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.9.0/w8YKp2YAgQt5REYk912HfKAHBjcXsrnvtjI0CBzoAT4.tar.br",
+    array2d: "https://github.com/mulias/roc-array2d/releases/download/v0.3.1/2Jqajvxn36vRryyQBSluU6Fo6vVI5yNSYmcJcyaKp0Y.tar.br",
 }
 
 import cli.Stdout
-import cli.Task exposing [Task]
 import array2d.Array2D exposing [Array2D]
 import array2d.Index2D exposing [Index2D]
 import "example.txt" as exampleInput : Str
@@ -76,16 +75,16 @@ initCave = \input ->
 toPaths : Str -> List Path
 toPaths = \input ->
     input
-    |> Str.split "\n"
+    |> Str.splitOn "\n"
     |> List.dropLast 1
     |> List.map \line ->
         line
-        |> Str.split " -> "
+        |> Str.splitOn " -> "
         |> List.map toPoint
 
 toPoint : Str -> Index2D
 toPoint = \input ->
-    when Str.split input "," is
+    when Str.splitOn input "," is
         [strCol, strRow] ->
             row = strRow |> Str.toU64 |> orCrash "Expected a number"
             col = strCol |> Str.toU64 |> orCrash "Expected a number"
