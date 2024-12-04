@@ -1,50 +1,50 @@
-interface Array2D exposes [
-        Array2D,
-        empty,
-        identity,
-        repeat,
-        init,
-        initWithList,
-        initWithLists,
-        fromList,
-        fromLists,
-        fromExactList,
-        fromExactLists,
-        shape,
-        size,
-        hasIndex,
-        isEmpty,
-        set,
-        get,
-        update,
-        replace,
-        swap,
-        map,
-        mapWithIndex,
-        walk,
-        walkUntil,
-        first,
-        last,
-        firstIndex,
-        lastIndex,
-        toList,
-        toLists,
-        reshape,
-        transpose,
-        flipRows,
-        flipCols,
-        rotateClockwise,
-        rotateCounterClockwise,
-        countIf,
-        findFirstIndex,
-        findLastIndex,
-        joinWith,
-        subarray,
-        mul,
-    ] imports [
-        Shape2D.{ Shape2D },
-        Index2D.{ Index2D },
-    ]
+module [
+    Array2D,
+    empty,
+    identity,
+    repeat,
+    init,
+    initWithList,
+    initWithLists,
+    fromList,
+    fromLists,
+    fromExactList,
+    fromExactLists,
+    shape,
+    size,
+    hasIndex,
+    isEmpty,
+    set,
+    get,
+    update,
+    replace,
+    swap,
+    map,
+    mapWithIndex,
+    walk,
+    walkUntil,
+    first,
+    last,
+    firstIndex,
+    lastIndex,
+    toList,
+    toLists,
+    reshape,
+    transpose,
+    flipRows,
+    flipCols,
+    rotateClockwise,
+    rotateCounterClockwise,
+    countIf,
+    findFirstIndex,
+    findLastIndex,
+    joinWith,
+    subarray,
+    mul,
+]
+
+import Shape2D exposing [Shape2D]
+import Index2D exposing [Index2D]
 
 ## Fixed size two dimensional array. Unlike the builtin `List` data type
 ## `Array2D` is fully allocated on creation, with a starting element for each
@@ -385,8 +385,10 @@ expect
 swap : Array2D a, Index2D, Index2D -> Array2D a
 swap = \@Array2D array, indexA, indexB ->
     result =
-        listIndexOf array.shape indexA |> Result.try \listIndexA ->
-            listIndexOf array.shape indexB |> Result.map \listIndexB ->
+        listIndexOf array.shape indexA
+        |> Result.try \listIndexA ->
+            listIndexOf array.shape indexB
+            |> Result.map \listIndexB ->
                 @Array2D { array & data: List.swap array.data listIndexA listIndexB }
 
     result |> Result.withDefault (@Array2D array)
