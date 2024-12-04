@@ -2,6 +2,12 @@
 
 Fixed size 2D arrays for [Roc](https://www.roc-lang.org/).
 
+## Documentation
+
+See [mulias.github.io/roc-array2d/](https://mulias.github.io/roc-array2d/)
+
+Locally generate docs using `roc docs package/main.roc`
+
 ## Examples
 
 - [Advent of Code 2022 day 5](examples/aoc_2022/day_05)
